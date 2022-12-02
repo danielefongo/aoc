@@ -32,23 +32,46 @@ impl From<&str> for Hand {
             "A" => Self::Rock,
             "B" => Self::Paper,
             "C" => Self::Scissor,
-            "X" => Self::Rock,
-            "Y" => Self::Paper,
-            "Z" => Self::Scissor,
             _ => panic!("Invalid input"),
         }
     }
 }
-
-pub fn run() {
-    part1(read_input(2));
+impl From<Strategy> for Hand {
+    fn from(input: Strategy) -> Self {
+        match input {
+            Strategy::One(value) => match &value[..] {
+                "X" => Self::Rock,
+                "Y" => Self::Paper,
+                "Z" => Self::Scissor,
+                _ => panic!("Invalid input"),
+            },
+            Strategy::Two(strategy, other_hand) => match (&strategy[..], other_hand) {
+                ("X", Hand::Rock) => Hand::Scissor,
+                ("X", Hand::Paper) => Hand::Rock,
+                ("X", Hand::Scissor) => Hand::Paper,
+                ("Y", hand) => hand,
+                ("Z", Hand::Rock) => Hand::Paper,
+                ("Z", Hand::Paper) => Hand::Scissor,
+                ("Z", Hand::Scissor) => Hand::Rock,
+                _ => panic!("Invalid input"),
+            },
+        }
+    }
 }
 
-fn part1(input: String) {
+enum Strategy {
+    One(String),
+    Two(String, Hand),
+}
+
+pub fn run() {
+    let input = read_input(2);
+    let strategy = strategy_2;
+
     let data: Vec<(Hand, Hand)> = input
         .split("\n")
         .filter(|it| !it.is_empty())
-        .map(parse_line)
+        .map(strategy)
         .collect();
 
     let points: u32 = data
@@ -59,12 +82,18 @@ fn part1(input: String) {
     println!("{:?}", points);
 }
 
-fn parse_line(line: &str) -> (Hand, Hand) {
-    let hands = line
-        .split(" ")
-        .map(Into::into)
-        .take(2)
-        .collect::<Vec<Hand>>();
+fn strategy_1(line: &str) -> (Hand, Hand) {
+    let hands = line.split(" ").take(2).collect::<Vec<&str>>();
+    let other_hand = hands[0].into();
+    let my_hand: Hand = Strategy::One(hands[1].to_owned()).into();
 
-    (hands[0].clone(), hands[1].clone())
+    (other_hand, my_hand)
+}
+
+fn strategy_2(line: &str) -> (Hand, Hand) {
+    let hands = line.split(" ").take(2).collect::<Vec<&str>>();
+    let other_hand: Hand = hands[0].into();
+    let my_hand: Hand = Strategy::Two(hands[1].to_owned(), other_hand.clone()).into();
+
+    (other_hand, my_hand)
 }
