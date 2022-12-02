@@ -1,12 +1,23 @@
-use std::fs::File;
-use std::io::prelude::*;
+use crate::utils::read_input;
 
 pub fn run() {
-    part1(read_input("./src/day1/input"));
+    part1(read_input(1));
 }
 
 fn part1(input: String) {
-    let max_resources: u32 = input
+    let resources: Vec<u32> = get_resources(input);
+    println!("{:?}", resources.iter().max().unwrap());
+}
+
+fn part2(input: String) {
+    let resources: Vec<u32> = get_resources(input);
+    let top3: u32 = resources.iter().take(3).sum();
+
+    println!("{:?}", top3);
+}
+
+fn get_resources(input: String) -> Vec<u32> {
+    let mut resources: Vec<u32> = input
         .split("\n\n")
         .collect::<Vec<&str>>()
         .iter()
@@ -17,15 +28,8 @@ fn part1(input: String) {
                 .map(|it| it.parse::<u32>().unwrap())
                 .sum()
         })
-        .max()
-        .unwrap();
+        .collect();
 
-    println!("{:?}", max_resources);
-}
-
-fn read_input(path: &str) -> String {
-    let mut file = File::open(path).unwrap();
-    let mut data = String::new();
-    file.read_to_string(&mut data).unwrap();
-    data
+    resources.sort_by(|a, b| b.cmp(a));
+    resources
 }
