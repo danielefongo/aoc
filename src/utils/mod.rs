@@ -7,3 +7,11 @@ pub fn read_input(day: u32) -> String {
     file.read_to_string(&mut data).unwrap();
     data
 }
+
+pub fn lines(input: String) -> Vec<String> {
+    input
+        .split("\n")
+        .filter(|it| !it.is_empty())
+        .map(|it| it.to_owned())
+        .collect()
+}

@@ -1,27 +1,45 @@
-use crate::utils::read_input;
+use crate::utils::{lines, read_input};
 
 pub fn run() {
-    part1(read_input(3));
+    println!("Part1: {}", part1(read_input(3)));
+    println!("Part2: {}", part2(read_input(3)));
 }
 
-fn part1(input: String) {
-    let result = input
-        .split("\n")
-        .filter(|it| !it.is_empty())
+fn part1(input: String) -> u32 {
+    lines(input)
+        .into_iter()
+        .map(split_bag)
         .map(find_common_item)
-        .sum::<u32>();
-
-    println!("{}", result);
+        .sum::<u32>()
 }
 
-fn find_common_item(line: &str) -> u32 {
-    let compartment_size = line.len() / 2;
-    let first_compartment: &str = &line[0..compartment_size];
-    let second_compartment: &str = &line[compartment_size..line.len()];
+fn part2(input: String) -> u32 {
+    lines(input)
+        .chunks(3)
+        .map(|chunk| chunk.to_vec())
+        .map(find_common_item)
+        .sum::<u32>()
+}
 
-    let character = first_compartment
+fn split_bag(line: String) -> Vec<String> {
+    let compartment_size = line.len() / 2;
+    let first_compartment = line[0..compartment_size].to_owned();
+    let second_compartment = line[compartment_size..line.len()].to_owned();
+
+    vec![first_compartment, second_compartment]
+}
+
+fn find_common_item(data: Vec<String>) -> u32 {
+    let first = data.first().unwrap();
+    let others: Vec<String> = data.iter().cloned().skip(1).collect();
+
+    let character = first
         .chars()
-        .find(|it| second_compartment.find(it.to_owned()).is_some())
+        .find(|it| {
+            others
+                .iter()
+                .all(|other| other.find(it.to_owned()).is_some())
+        })
         .unwrap();
 
     let value = match character {
