@@ -9,6 +9,9 @@ impl Range {
     fn contains(&self, other: &Range) -> bool {
         self.min <= other.min && self.max >= other.max
     }
+    fn intersect_left(&self, other: &Range) -> bool {
+        self.max >= other.min && self.min <= other.min
+    }
 }
 impl From<String> for Range {
     fn from(input: String) -> Self {
@@ -22,16 +25,27 @@ impl From<String> for Range {
 }
 
 pub fn run() {
-    let count = lines(read_input(4))
-        .iter()
-        .map(|it| to_ranges(it))
-        .filter(|(r1, r2)| r1.contains(&r2) || r2.contains(&r1))
-        .count();
-
-    println!("Part1: {}", count);
+    println!("Part1: {}", count(filter_contains));
+    println!("Part2: {}", count(filter_intersect));
 }
 
-fn to_ranges(input: &String) -> (Range, Range) {
+fn count(filter: impl FnMut(&(Range, Range)) -> bool) -> usize {
+    lines(read_input(4))
+        .into_iter()
+        .map(to_ranges)
+        .filter(filter)
+        .count()
+}
+
+fn filter_contains((r1, r2): &(Range, Range)) -> bool {
+    r1.contains(&r2) || r2.contains(&r1)
+}
+
+fn filter_intersect((r1, r2): &(Range, Range)) -> bool {
+    r1.intersect_left(&r2) || r2.intersect_left(&r1)
+}
+
+fn to_ranges(input: String) -> (Range, Range) {
     let inputs = input
         .split(",")
         .map(|it| it.to_owned())
