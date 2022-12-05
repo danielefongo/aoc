@@ -12,13 +12,6 @@ struct Cargo {
     crates: HashMap<usize, VecDeque<Crate>>,
 }
 impl Cargo {
-    fn apply(&mut self, movement: &Move) {
-        (0..movement.quantity).into_iter().for_each(|_| {
-            let krate = self.pop_from_top(movement.from).unwrap();
-
-            self.put_on_top(movement.to, krate);
-        });
-    }
     fn top_crates(&self) -> Vec<String> {
         (0..self.crates.len())
             .map(|idx| {
@@ -78,6 +71,34 @@ impl Display for Crate {
     }
 }
 
+trait Crane {
+    fn apply(movement: &Move, cargo: &mut Cargo);
+}
+
+struct Crane9000 {}
+impl Crane for Crane9000 {
+    fn apply(movement: &Move, cargo: &mut Cargo) {
+        (0..movement.quantity).into_iter().for_each(|_| {
+            let krate = cargo.pop_from_top(movement.from).unwrap();
+            cargo.put_on_top(movement.to, krate);
+        });
+    }
+}
+
+struct Crane9001 {}
+impl Crane for Crane9001 {
+    fn apply(movement: &Move, cargo: &mut Cargo) {
+        let crates: Vec<Crate> = (0..movement.quantity)
+            .into_iter()
+            .map(|_| cargo.pop_from_top(movement.from).unwrap())
+            .collect();
+
+        crates.into_iter().rev().for_each(|c| {
+            cargo.put_on_top(movement.to, c);
+        })
+    }
+}
+
 #[derive(Debug)]
 struct Move {
     quantity: usize,
@@ -91,14 +112,14 @@ impl Move {
 }
 impl From<String> for Move {
     fn from(line: String) -> Self {
-        let re = Regex::new("move \\d+ from \\d+ to \\d+").unwrap();
-        let re2 = Regex::new("\\d+").unwrap();
+        let valid_input = Regex::new("move \\d+ from \\d+ to \\d+").unwrap();
 
-        if !re.is_match(&line) {
+        if !valid_input.is_match(&line) {
             panic!("invalid input")
         };
 
-        let numbers: Vec<usize> = re2
+        let numbers: Vec<usize> = Regex::new("\\d+")
+            .unwrap()
             .find_iter(&line)
             .filter_map(|digits| digits.as_str().parse().ok())
             .collect();
@@ -108,24 +129,39 @@ impl From<String> for Move {
 }
 
 pub fn run() {
+    let (mut cargo, moves) = generate_data();
+    moves.iter().for_each(|movement| {
+        Crane9000::apply(movement, &mut cargo);
+    });
+
+    println!("Part1: {:?}", cargo.top_crates().join(""));
+
+    let (mut cargo, moves) = generate_data();
+    moves.iter().for_each(|movement| {
+        Crane9001::apply(movement, &mut cargo);
+    });
+
+    println!("Part2: {:?}", cargo.top_crates().join(""));
+}
+
+fn generate_data() -> (Cargo, Vec<Move>) {
     let input = lines(read_input(5));
 
     let (mut config, moves): (Vec<String>, Vec<String>) =
         input.into_iter().partition(|it| !it.starts_with("move"));
     config.remove(config.len() - 1);
 
-    let mut cargo: Cargo = config.into();
+    let cargo: Cargo = config.into();
 
     let moves: Vec<Move> = moves.into_iter().map(Into::into).collect();
-    moves.iter().for_each(|movement| {
-        cargo.apply(movement);
-    });
 
-    println!("Part1: {:?}", cargo.top_crates().join(""));
+    (cargo, moves)
 }
 
 #[cfg(test)]
 mod tests {
+    use crate::day05::{Crane, Crane9000, Crane9001};
+
     use super::{Cargo, Move};
 
     #[test]
@@ -137,13 +173,24 @@ mod tests {
     }
 
     #[test]
-    fn movement() {
+    fn movement_on_crane9000() {
         let input = vec!["[A]".to_owned(), "[C] [B]".to_owned()];
         let movement = Move::new(1, 0, 1);
 
         let mut cargo: Cargo = input.into();
-        cargo.apply(&movement);
+        Crane9000::apply(&movement, &mut cargo);
 
         assert_eq!(cargo.top_crates(), vec!["C", "A"]);
+    }
+
+    #[test]
+    fn movement_on_crane9001() {
+        let input = vec!["[A]".to_owned(), "[C] [B]".to_owned()];
+
+        let mut cargo: Cargo = input.into();
+        Crane9001::apply(&Move::new(2, 0, 1), &mut cargo);
+        Crane9001::apply(&Move::new(1, 1, 0), &mut cargo);
+
+        assert_eq!(cargo.top_crates(), vec!["A", "C"]);
     }
 }
