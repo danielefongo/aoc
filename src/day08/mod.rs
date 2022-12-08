@@ -1,52 +1,90 @@
 use crate::utils::read_input;
 
+type Pos = (usize, usize);
+type Trees = Vec<usize>;
+type Matrix = Vec<Trees>;
+
 pub fn run() {
     let matrix = create_matrix(read_input(8));
+
+    println!("Part1: {}", walk(matrix.len() * 4 - 4, &matrix, updater1));
+    println!("Part2: {}", walk(None, &matrix, updater2).unwrap());
+}
+
+fn walk<T>(initial: T, matrix: &Matrix, updater: fn(&T, usize, Pos, &Matrix) -> T) -> T {
     let (width, height) = (matrix.len(), matrix.first().unwrap().len());
 
-    let mut count = width * 2 + height * 2 - 4;
+    let mut actual = initial;
 
     matrix
         .iter()
         .enumerate()
         .skip(1)
-        .take(matrix.len() - 2)
+        .take(height - 2)
         .for_each(|(y, vec)| {
             vec.iter()
                 .enumerate()
                 .skip(1)
-                .take(vec.len() - 2)
+                .take(width - 2)
                 .for_each(|(x, &height)| {
-                    if visible_right(height, (x, y), &matrix)
-                        || visible_left(height, (x, y), &matrix)
-                        || visible_top(height, (x, y), &matrix)
-                        || visible_bottom(height, (x, y), &matrix)
-                    {
-                        count += 1;
-                    }
+                    actual = updater(&actual, height, (x, y), &matrix);
                 })
         });
 
-    println!("Part1: {}", count);
+    actual
 }
 
-fn visible_right(height: usize, (x, y): (usize, usize), matrix: &Vec<Vec<usize>>) -> bool {
-    matrix[y].iter().skip(x + 1).max().unwrap() < &height
+fn updater1(count: &usize, height: usize, pos: Pos, matrix: &Matrix) -> usize {
+    if tallest(height, right_of(pos, &matrix))
+        || tallest(height, left_of(pos, &matrix))
+        || tallest(height, top_of(pos, &matrix))
+        || tallest(height, bottom_of(pos, &matrix))
+    {
+        count + 1
+    } else {
+        count.clone()
+    }
 }
 
-fn visible_left(height: usize, (x, y): (usize, usize), matrix: &Vec<Vec<usize>>) -> bool {
-    matrix[y].iter().take(x).max().unwrap() < &height
+fn updater2(best: &Option<usize>, height: usize, pos: Pos, matrix: &Matrix) -> Option<usize> {
+    let score = count_of_visible_trees(height, right_of(pos, &matrix))
+        * count_of_visible_trees(height, left_of(pos, &matrix))
+        * count_of_visible_trees(height, top_of(pos, &matrix))
+        * count_of_visible_trees(height, bottom_of(pos, &matrix));
+
+    best.map(|it| it.max(score)).or_else(|| Some(score))
 }
 
-fn visible_bottom(height: usize, (x, y): (usize, usize), matrix: &Vec<Vec<usize>>) -> bool {
-    matrix.iter().skip(y + 1).map(|it| it[x]).max().unwrap() < height
+fn right_of((x, y): (usize, usize), matrix: &Matrix) -> Trees {
+    matrix[y].iter().skip(x + 1).cloned().collect()
 }
 
-fn visible_top(height: usize, (x, y): (usize, usize), matrix: &Vec<Vec<usize>>) -> bool {
-    matrix.iter().take(y).map(|it| it[x]).max().unwrap() < height
+fn left_of((x, y): (usize, usize), matrix: &Matrix) -> Trees {
+    matrix[y].iter().take(x).rev().cloned().collect()
 }
 
-fn create_matrix(data: String) -> Vec<Vec<usize>> {
+fn bottom_of((x, y): (usize, usize), matrix: &Matrix) -> Trees {
+    matrix.iter().skip(y + 1).map(|it| it[x]).collect()
+}
+
+fn top_of((x, y): (usize, usize), matrix: &Matrix) -> Trees {
+    matrix.iter().take(y).rev().map(|it| it[x]).collect()
+}
+
+fn tallest(height: usize, other_trees: Trees) -> bool {
+    other_trees.iter().max().unwrap() < &height
+}
+
+fn count_of_visible_trees(height: usize, other_trees: Trees) -> usize {
+    let count = other_trees.iter().take_while(|&it| it < &height).count();
+    if count > 0 && count < other_trees.len() && other_trees[count] >= height {
+        count + 1
+    } else {
+        count
+    }
+}
+
+fn create_matrix(data: String) -> Matrix {
     data.split("\n")
         .into_iter()
         .filter(|line| !line.is_empty())
