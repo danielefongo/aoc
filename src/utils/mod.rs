@@ -1,3 +1,4 @@
+use regex::Regex;
 use std::fs::File;
 use std::io::prelude::*;
 
@@ -14,4 +15,9 @@ pub fn lines(input: String) -> Vec<String> {
         .filter(|it| !it.is_empty())
         .map(|it| it.to_owned())
         .collect()
+}
+
+pub fn matches(data: &str, regex: &str) -> bool {
+    let regex = Regex::new(regex).unwrap();
+    regex.is_match(&data)
 }

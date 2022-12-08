@@ -1,0 +1,250 @@
+// use std::{iter::Peekable, slice::IterMut};
+
+// use regex::Regex;
+
+// use crate::utils::read_input;
+
+// struct Error;
+
+// #[derive(Debug)]
+// enum File {
+//     Directory(Directory),
+//     Regular(Regular),
+// }
+// impl File {
+//     fn cd(&mut self, path: String) -> Option<&mut File> {
+//         match self {
+//             File::Directory(dir) => dir.get_folder(path),
+//             File::Regular(_) => todo!(),
+//         }
+//     }
+//     fn name(&self) -> String {
+//         match self {
+//             File::Directory(dir) => dir.name,
+//             File::Regular(file) => todo!(),
+//         }
+//     }
+// }
+
+// #[derive(Debug)]
+// struct Directory {
+//     name: String,
+//     files: Vec<File>,
+// }
+// impl Directory {
+//     fn new(name: String) -> Self {
+//         Self {
+//             name,
+//             files: vec![],
+//         }
+//     }
+//     fn get_folder(&mut self, name: String) -> Option<&mut File> {
+//         let file = self.files.iter_mut().find(|&it| it.name() == name);
+
+//         if file.is_none() {
+//             self.files.push(File::Directory(Directory::new(name)))
+//         }
+
+//         self.files
+//             .iter_mut()
+//             .find(|&it| matches!(it, File::Directory(_)) && it.name() == name)
+//     }
+// }
+
+// #[derive(Debug)]
+// struct Regular {}
+
+// #[derive(Debug)]
+// enum Command {
+//     CdTo(String),
+//     CdBack,
+//     Ls,
+// }
+// impl From<String> for Command {
+//     fn from(value: String) -> Self {
+//         let cd_to = Regex::new("\\$ cd (/|\\w)").unwrap();
+//         let cd_back = Regex::new("\\$ cd ..").unwrap();
+//         let ls = Regex::new("\\$ ls").unwrap();
+
+//         if cd_to.is_match(&value) {
+//             let name = Regex::new("(/|\\d)")
+//                 .unwrap()
+//                 .find_iter(&value)
+//                 .filter_map(|x| x.as_str().parse().ok())
+//                 .collect::<Vec<String>>();
+
+//             Command::CdTo(name.first().unwrap().clone())
+//         } else if cd_back.is_match(&value) {
+//             Command::CdBack
+//         } else if ls.is_match(&value) {
+//             Command::Ls
+//         } else {
+//             panic!("invalid input");
+//         }
+//     }
+// }
+
+// pub fn run() {
+//     let mut input = read_input(7)
+//         .split("\n")
+//         .map(|it| it.to_owned())
+//         .skip(1)
+//         .collect::<Vec<String>>();
+
+//     let root = create_file("/", &mut input.iter_mut().peekable());
+//     println!("Part1: TODO");
+// }
+
+// fn create_file(name: &str, inputs: &mut Peekable<IterMut<String>>) -> File {
+//     let mut root = Directory::new(name.to_owned());
+
+//     while let Some(input) = inputs.next() {
+//         let cd_to = Regex::new("\\$ cd (/|\\w)").unwrap();
+//         let cd_back = Regex::new("\\$ cd ..").unwrap();
+//         let ls = Regex::new("\\$ ls").unwrap();
+//         let dir = Regex::new("dir \\w").unwrap();
+//         let file = Regex::new("\\d+ \\w").unwrap();
+
+//         if cd_to.is_match(&input) {
+//             let name = Regex::new("(/|\\d)")
+//                 .unwrap()
+//                 .find_iter(&input)
+//                 .filter_map(|x| x.as_str().parse().ok())
+//                 .collect::<Vec<String>>();
+//             // let root.get(name.first().unwrap())
+//         } else if cd_back.is_match(&input) {
+//         } else if ls.is_match(&input) {
+//         } else {
+//         }
+
+//         // if
+//         // println!("{}", input);
+//         // inputs.next();
+//     }
+//     // println!("on {:?}", name);
+//     // if let Some(input) = inputs.peek() {
+//     //     if input.starts_with("$") {
+//     //         let command: Command = (*input).clone().into();
+//     //         println!("{:?}", command);
+//     //         match command {
+//     //             Command::CdTo(dir) => {
+//     //                 inputs.next();
+//     //                 create_file(&dir, inputs);
+//     //             }
+//     //             Command::CdBack => {
+//     //                 inputs.next();
+//     //                 // create_file(inputs);
+//     //             }
+//     //             Command::Ls => {}
+//     //         }
+//     //         // if let Ok(command) = command {
+//     //         // } else {
+//     //         //     println!("{}", input);
+//     //         // }
+//     //     } else {
+//     //         println!("{}", input);
+//     //     }
+//     // }
+
+//     File::Directory(Directory {
+//         name: "pippo".to_owned(),
+//     })
+// }
+
+use std::{collections::HashMap, slice::IterMut};
+
+use regex::Regex;
+
+use crate::utils::{lines, read_input};
+
+struct Folder {
+    parent: Option<Box<Folder>>,
+    name: String,
+    folders: HashMap<String, Folder>,
+}
+impl Folder {
+    fn new(name: String) -> Self {
+        Self {
+            name,
+            parent: None,
+            folders: HashMap::new(),
+        }
+    }
+    fn add(&mut self, folder: Folder) {}
+    fn get(&mut self, folder_name: String) -> &mut Folder {
+        self.folders.get_mut(&folder_name).unwrap()
+    }
+}
+
+pub fn run() {
+    let data = lines(read_input(7));
+    let mut iter = data.iter().map(|it| parse_line(it));
+
+    iter.next();
+
+    let mut folder = Folder::new("/".to_owned());
+    handle_folder(&mut folder, &mut iter);
+}
+
+fn handle_folder<'a>(folder: &'a mut Folder, iter: &'a mut impl Iterator<Item = Line>) {
+    if let Some(line) = iter.next() {
+        match line {
+            Line::CdTo(subdir) => {
+                let subfolder = folder.get(subdir);
+                handle_folder(subfolder, iter);
+            }
+            Line::Dir(name) => {
+                println!("smth");
+                folder.add(Folder::new(name));
+            }
+            Line::File(_, _) => {
+                println!("nothing");
+            }
+            _ => (),
+        }
+    } else {
+        folder
+    }
+}
+
+#[derive(Debug)]
+enum Line {
+    CdTo(String),
+    CdBack,
+    Ls,
+    Dir(String),
+    File(String, usize),
+    Nop,
+}
+
+fn parse_line(line: &str) -> Line {
+    if matches(line, "\\$ cd (/|\\w+)") {
+        Line::CdTo(line.replace("$ cd ", ""))
+    } else if matches(line, "\\$ cd ..") {
+        Line::CdBack
+    } else if matches(line, "\\$ ls") {
+        Line::Ls
+    } else if matches(line, "dir \\w") {
+        Line::Dir(line.replace("dir ", ""))
+    } else if matches(line, "\\d+ \\w") {
+        let data: Vec<&str> = line.split(" ").collect();
+        let first = data[0].parse::<usize>().unwrap();
+        let second = data[1];
+        Line::File(second.to_owned(), first)
+    } else {
+        Line::Nop
+    }
+}
+
+fn matches(data: &str, regex: &str) -> bool {
+    let regex = Regex::new(regex).unwrap();
+    regex.is_match(&data)
+}
+
+fn extract(data: &str, regex: &str) -> Vec<String> {
+    Regex::new(regex)
+        .unwrap()
+        .find_iter(&data)
+        .filter_map(|x| x.as_str().parse().ok())
+        .collect::<Vec<String>>()
+}
