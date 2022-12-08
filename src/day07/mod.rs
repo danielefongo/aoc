@@ -20,7 +20,7 @@ enum TerminalLine {
 }
 impl From<&String> for TerminalLine {
     fn from(line: &String) -> Self {
-        if matches(line, "\\$ cd (/|\\w+)") {
+        if matches(line, "\\$ cd \\w+") {
             TerminalLine::CdTo(line.replace("$ cd ", ""))
         } else if matches(line, "\\$ cd ..") {
             TerminalLine::CdBack
@@ -66,6 +66,14 @@ impl Folder {
         self.size += size;
         Weak::upgrade(&self.parent).map(|it| it.borrow_mut().increase_size(size));
     }
+    fn walk(&self, folders: &mut Vec<RcFolder>, filter: &dyn Fn(&RcFolder) -> bool) {
+        self.folders.values().into_iter().for_each(|f| {
+            if filter(f) {
+                folders.push(Rc::clone(f));
+            }
+            f.borrow().walk(folders, &filter);
+        })
+    }
 }
 
 pub fn run() {
@@ -76,24 +84,25 @@ pub fn run() {
 
     let folder = Rc::new(RefCell::new(Folder::new("/".to_owned(), Weak::new())));
     build_tree(&folder, &mut iter);
-    println!("{:?}", part1(&folder, 100000));
-}
 
-fn part1(folder: &RcFolder, size: usize) -> usize {
+    let mut folders = vec![];
     folder
         .borrow()
-        .folders
-        .values()
-        .into_iter()
-        .map(|it| {
-            let it_size = it.borrow().size;
-            if it_size < size {
-                it_size + part1(it, size)
-            } else {
-                part1(it, size)
-            }
-        })
-        .sum()
+        .walk(&mut folders, &|f| f.borrow().size < 100000);
+    println!(
+        "Part1: {:?}",
+        folders.iter().map(|it| it.borrow().size).sum::<usize>()
+    );
+
+    let mut folders = vec![];
+    let needed_space = 30000000 - (70000000 - folder.borrow().size);
+    folder
+        .borrow()
+        .walk(&mut folders, &|f| f.borrow().size > needed_space);
+    println!(
+        "Part2: {:?}",
+        folders.iter().map(|it| it.borrow().size).min().unwrap()
+    );
 }
 
 fn build_tree<'a>(folder: &RcFolder, iter: &'a mut impl Iterator<Item = TerminalLine>) {
