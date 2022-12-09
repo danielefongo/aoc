@@ -1,6 +1,9 @@
-use std::collections::HashSet;
+use std::{cell::RefCell, collections::HashSet, ops::Deref, rc::Rc};
 
 use crate::utils::{lines, read_input};
+
+type RcPoint = Rc<RefCell<Point>>;
+type Pos = (i32, i32);
 
 #[derive(Debug, Clone)]
 enum Step {
@@ -13,6 +16,13 @@ enum Step {
 #[derive(Debug)]
 struct Steps {
     steps: Vec<Step>,
+}
+impl Deref for Steps {
+    type Target = Vec<Step>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.steps
+    }
 }
 impl From<Vec<String>> for Steps {
     fn from(lines: Vec<String>) -> Self {
@@ -41,13 +51,15 @@ impl From<Vec<String>> for Steps {
 struct Point {
     x: i32,
     y: i32,
-    path: HashSet<(i32, i32)>,
+    tail: Option<RcPoint>,
+    path: HashSet<Pos>,
 }
 impl Point {
-    fn new() -> Self {
+    fn new(tail: Option<RcPoint>) -> Self {
         let mut point = Self {
             x: 0,
             y: 0,
+            tail,
             path: HashSet::new(),
         };
         point.update_path();
@@ -61,6 +73,7 @@ impl Point {
             Step::Down => self.y -= 1,
         }
         self.update_path();
+        self.drag_tail();
     }
     fn follow(&mut self, other: &Point) {
         let x_diff = other.x - self.x;
@@ -79,6 +92,12 @@ impl Point {
         }
 
         self.update_path();
+        self.drag_tail();
+    }
+    fn drag_tail(&mut self) {
+        if let Some(tail) = &self.tail {
+            tail.borrow_mut().follow(&self);
+        }
     }
     fn update_path(&mut self) {
         self.path.insert((self.x, self.y));
@@ -87,12 +106,21 @@ impl Point {
 
 pub fn run() {
     let steps: Steps = lines(read_input(9)).into();
-    let mut head = Point::new();
-    let mut tail = Point::new();
-    steps.steps.into_iter().for_each(|s| {
-        head.walk(&s);
-        tail.follow(&head);
+    println!("Part1: {:?}", inner_run(1, &steps));
+    println!("Part2: {:?}", inner_run(9, &steps));
+}
+
+fn inner_run(tails: usize, steps: &Steps) -> usize {
+    let tail = Rc::new(RefCell::new(Point::new(None)));
+    let head = (0..tails).fold(Rc::clone(&tail), |a, _| {
+        let new_head = Rc::new(RefCell::new(Point::new(Some(a))));
+        new_head
     });
 
-    println!("Part1: {:?}", tail.path.len());
+    steps.iter().for_each(|s| {
+        head.borrow_mut().walk(s);
+    });
+
+    let borrowed_tail = tail.borrow_mut();
+    borrowed_tail.path.len()
 }
