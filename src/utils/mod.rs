@@ -21,3 +21,15 @@ pub fn matches(data: &str, regex: &str) -> bool {
     let regex = Regex::new(regex).unwrap();
     regex.is_match(&data)
 }
+
+pub fn extract(data: &str, regex: &str) -> Vec<String> {
+    Regex::new(regex)
+        .unwrap()
+        .find_iter(&data)
+        .map(|digits| digits.as_str().to_owned())
+        .collect()
+}
+
+pub fn extract_one(data: &str, regex: &str) -> String {
+    extract(data, regex).first().unwrap().clone()
+}
