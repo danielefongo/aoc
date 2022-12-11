@@ -21,19 +21,6 @@ impl From<&String> for Item {
 }
 
 #[derive(Debug)]
-struct Condition(usize);
-impl Condition {
-    fn matches(&self, input: usize) -> bool {
-        input % self.0 == 0
-    }
-}
-impl From<String> for Condition {
-    fn from(input: String) -> Self {
-        Self(input.parse().unwrap())
-    }
-}
-
-#[derive(Debug)]
 enum Value {
     Old,
     Int(usize),
@@ -120,15 +107,18 @@ struct Monkey {
     operation: Operation,
     to_if_false: usize,
     to_if_true: usize,
-    condition: Condition,
+    condition: usize,
+    bound: usize,
+    worry_level_divider: usize,
 }
 impl Monkey {
     fn do_round(&mut self) -> Vec<Throw> {
         let mut throws: Vec<Throw> = vec![];
 
         while let Some(mut item) = self.items.pop_front() {
-            item.value = self.operation.execute(item.value) / 3;
-            let to = if self.condition.matches(item.value) {
+            item.value =
+                (self.operation.execute(item.value) / self.worry_level_divider) % self.bound;
+            let to = if item.value % self.condition == 0 {
                 self.to_if_true
             } else {
                 self.to_if_false
@@ -151,7 +141,7 @@ impl From<&str> for Monkey {
             .collect::<VecDeque<Item>>();
         let operation: Operation =
             extract_one(inputs[2], "(\\w+|\\d+) (\\+|-|\\*|/) (\\w+|\\d+)").into();
-        let condition: Condition = extract_one(inputs[3], "\\d+").into();
+        let condition: usize = extract_one(inputs[3], "\\d+").parse().unwrap();
         let to_if_true: usize = extract_one(inputs[4], "\\d+").parse().unwrap();
         let to_if_false: usize = extract_one(inputs[5], "\\d+").parse().unwrap();
         Monkey {
@@ -160,21 +150,40 @@ impl From<&str> for Monkey {
             to_if_false,
             to_if_true,
             condition,
+            worry_level_divider: 3,
+            bound: usize::MAX,
             inspections: 0,
         }
     }
 }
 
 pub fn run() {
-    let input = read_input(11);
-    let input: Vec<&str> = input.split("\n\n").collect();
+    part1(&mut generate_monkeys());
+    part2(&mut generate_monkeys());
+}
 
-    let mut monkeys: HashMap<usize, Monkey> =
-        input.into_iter().map(Monkey::from).enumerate().collect();
-    let monkey_number = monkeys.len();
+fn part1(monkeys: &mut HashMap<usize, Monkey>) {
+    println!("Part1: {:?}", run_rounds(monkeys, 20));
+}
 
-    (0..20).for_each(|_round| {
-        (0..monkey_number).for_each(|monkey_idx| {
+fn part2(monkeys: &mut HashMap<usize, Monkey>) {
+    let bound = monkeys
+        .values()
+        .map(|it| it.condition)
+        .reduce(|a, b| a * b)
+        .unwrap();
+    (0..monkeys.len()).for_each(|monkey_idx| {
+        let mut monkey = monkeys.get_mut(&monkey_idx).unwrap();
+        monkey.bound = bound;
+        monkey.worry_level_divider = 1;
+    });
+
+    println!("Part2: {:?}", run_rounds(monkeys, 10000));
+}
+
+fn run_rounds(monkeys: &mut HashMap<usize, Monkey>, rounds: usize) -> usize {
+    (0..rounds).for_each(|_round| {
+        (0..monkeys.len()).for_each(|monkey_idx| {
             let monkey = monkeys.get_mut(&monkey_idx).unwrap();
             let throws = monkey.do_round();
             throws.into_iter().for_each(|it| {
@@ -189,5 +198,11 @@ pub fn run() {
         .collect::<Vec<usize>>();
     inspections.sort_by(|a, b| b.cmp(a));
 
-    println!("Part1: {:?}", inspections[0] * inspections[1]);
+    inspections[0] * inspections[1]
+}
+
+fn generate_monkeys() -> HashMap<usize, Monkey> {
+    let input = read_input(11);
+    let input: Vec<&str> = input.split("\n\n").collect();
+    input.into_iter().map(Monkey::from).enumerate().collect()
 }
