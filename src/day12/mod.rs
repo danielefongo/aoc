@@ -80,12 +80,17 @@ impl From<String> for Elevations {
     }
 }
 impl Elevations {
-    fn run(&self) -> usize {
+    fn run(
+        &self,
+        is_start: fn(&Palace) -> bool,
+        is_end: fn(&Palace) -> bool,
+        can_go_to: fn(&Palace, &Palace) -> bool,
+    ) -> usize {
         let mut distances: HashMap<Pos, usize> = HashMap::new();
         let mut queue: HashMap<Pos, &Palace> = HashMap::new();
 
         for palace in self.palaces.values() {
-            if matches!(palace.type_, PalaceType::S) {
+            if is_start(palace) {
                 distances.insert(palace.pos.clone(), 0);
             } else {
                 distances.insert(palace.pos.clone(), usize::MAX);
@@ -115,7 +120,7 @@ impl Elevations {
                 .nearest()
                 .iter()
                 .filter_map(|pos| self.palaces.get(pos))
-                .filter(|&it| palace.can_go_to(it))
+                .filter(|&it| can_go_to(palace, it))
                 .filter(|it| queue.contains_key(&it.pos))
                 .for_each(|palace| {
                     let v = palace.pos.clone();
@@ -129,8 +134,9 @@ impl Elevations {
 
         self.palaces
             .values()
-            .find(|it| matches!(it.type_, PalaceType::E))
+            .filter(|it| is_end(it))
             .map(|it| distances.get(&it.pos).unwrap())
+            .min()
             .unwrap()
             .clone()
     }
@@ -138,5 +144,20 @@ impl Elevations {
 
 pub fn run() {
     let elevations: Elevations = read_input(12).into();
-    println!("Part1: {}", elevations.run());
+    println!(
+        "Part1: {}",
+        elevations.run(
+            |it| matches!(it.type_, PalaceType::S),
+            |it| matches!(it.type_, PalaceType::E),
+            |palace_from, palace_to| palace_from.can_go_to(palace_to)
+        )
+    );
+    println!(
+        "Part2: {}",
+        elevations.run(
+            |it| matches!(it.type_, PalaceType::E),
+            |it| it.height == 0,
+            |palace_from, palace_to| palace_to.can_go_to(palace_from)
+        )
+    );
 }
