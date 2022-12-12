@@ -1,8 +1,8 @@
-use std::collections::HashMap;
+use std::collections::{BTreeSet, HashMap};
 
 use crate::utils::read_input;
 
-#[derive(Clone, Debug, Eq, PartialEq, Hash)]
+#[derive(Copy, Clone, Debug, Ord, PartialOrd, Eq, PartialEq, Hash)]
 struct Pos {
     x: i32,
     y: i32,
@@ -21,28 +21,22 @@ impl Pos {
     }
 }
 
-#[derive(Clone, Debug, Eq, PartialEq, Hash)]
+#[derive(Clone, Debug, Ord, PartialOrd, Eq, PartialEq, Hash)]
 enum PalaceType {
     S,
     E,
     N,
 }
 
-#[derive(Clone, Debug, Eq, PartialEq, Hash)]
+#[derive(Clone, Debug, Ord, PartialOrd, Eq, PartialEq, Hash)]
 struct Palace {
     type_: PalaceType,
     pos: Pos,
     height: u8,
-    distance: usize,
 }
 impl Palace {
     fn new(type_: PalaceType, pos: Pos, height: u8) -> Self {
-        Self {
-            type_,
-            pos,
-            height,
-            distance: 0,
-        }
+        Self { type_, pos, height }
     }
     fn can_go_to(&self, other: &Palace) -> bool {
         other.height <= self.height + 1
@@ -64,13 +58,12 @@ impl From<String> for Elevations {
                         .enumerate()
                         .map(|(c_idx, palace)| {
                             let pos = Pos::new(c_idx as i32, r_idx as i32);
-                            let pos2 = pos.clone();
                             let palace = match palace {
                                 'S' => Palace::new(PalaceType::S, pos, 0),
                                 'E' => Palace::new(PalaceType::E, pos, 25),
                                 it => Palace::new(PalaceType::N, pos, (it as u8) - ('a' as u8)),
                             };
-                            (pos2, palace)
+                            (pos, palace)
                         })
                         .collect::<Vec<(Pos, Palace)>>()
                 })
@@ -81,55 +74,49 @@ impl From<String> for Elevations {
 }
 impl Elevations {
     fn run(
-        &self,
+        &mut self,
         is_start: fn(&Palace) -> bool,
         is_end: fn(&Palace) -> bool,
         can_go_to: fn(&Palace, &Palace) -> bool,
     ) -> usize {
         let mut distances: HashMap<Pos, usize> = HashMap::new();
-        let mut queue: HashMap<Pos, &Palace> = HashMap::new();
+        let mut queue: BTreeSet<(usize, &Palace)> = BTreeSet::new();
 
         for palace in self.palaces.values() {
-            if is_start(palace) {
-                distances.insert(palace.pos.clone(), 0);
-            } else {
-                distances.insert(palace.pos.clone(), usize::MAX);
-            }
+            let distance = if is_start(palace) { 0 } else { usize::MAX };
 
-            queue.insert(palace.pos.clone(), palace);
+            queue.insert((distance, palace));
+            distances.insert(palace.pos, distance);
         }
 
         while !queue.is_empty() {
-            let u = distances
-                .iter()
-                .filter(|(pos, _)| queue.contains_key(pos))
-                .min_by(|(_, dist1), (_, dist2)| dist1.cmp(dist2))
-                .map(|(pos, _)| pos)
-                .unwrap()
-                .clone();
+            let (u_distance, palace) = queue.iter().next().unwrap().clone();
+            let u = palace.pos;
 
-            let palace = queue.remove(&u).unwrap();
-            let u_distance = distances.get(&u).unwrap().clone();
+            queue.remove(&(u_distance, palace));
 
             if u_distance == usize::MAX {
                 continue;
             }
 
-            palace
-                .pos
+            let neighbours = u
                 .nearest()
                 .iter()
                 .filter_map(|pos| self.palaces.get(pos))
                 .filter(|&it| can_go_to(palace, it))
-                .filter(|it| queue.contains_key(&it.pos))
-                .for_each(|palace| {
-                    let v = palace.pos.clone();
-                    let alt = u_distance + 1;
+                .collect::<Vec<&Palace>>();
 
-                    if &alt < distances.get(&v).unwrap() {
-                        distances.insert(v, alt);
-                    }
-                });
+            for palace in neighbours {
+                let v = palace.pos.clone();
+                let v_distance = distances.get(&v).unwrap();
+                let alt = u_distance + 1;
+
+                if &alt < v_distance {
+                    queue.remove(&(*v_distance, palace));
+                    queue.insert((alt, palace));
+                    distances.insert(v, alt);
+                }
+            }
         }
 
         self.palaces
@@ -143,7 +130,7 @@ impl Elevations {
 }
 
 pub fn run() {
-    let elevations: Elevations = read_input(12).into();
+    let mut elevations: Elevations = read_input(12).into();
     println!(
         "Part1: {}",
         elevations.run(
