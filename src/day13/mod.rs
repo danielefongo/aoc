@@ -102,7 +102,6 @@ impl Ord for List {
                 .get(0)
                 .map(|it| List::Single(*l).cmp(&it))
                 .unwrap_or(Ordering::Greater),
-            _ => Ordering::Greater,
         }
     }
 }
@@ -122,7 +121,16 @@ fn compare(input1: &str, input2: &str) -> Ordering {
 }
 
 pub fn run() {
-    let out = lines(read_input(13))
+    let mut lines = lines(read_input(13));
+    println!("Part1: {}", part1(&lines));
+
+    lines.push("[[2]]".to_owned());
+    lines.push("[[6]]".to_owned());
+    println!("Part2: {}", part2(&lines));
+}
+
+fn part1(lines: &Vec<String>) -> usize {
+    lines
         .chunks(2)
         .enumerate()
         .filter(|(_, lines)| {
@@ -131,9 +139,22 @@ pub fn run() {
             !matches!(left.cmp(&right), Ordering::Greater)
         })
         .map(|(idx, _)| idx + 1)
-        .sum::<usize>();
+        .sum::<usize>()
+}
 
-    println!("Part1: {:?}", out);
+fn part2(lines: &Vec<String>) -> usize {
+    let mut sortable_list = lines.iter().map(|it| parse_list(it)).collect::<Vec<List>>();
+
+    sortable_list.sort();
+
+    sortable_list
+        .into_iter()
+        .enumerate()
+        .filter(|(_, it)| {
+            it == &multiple!(multiple!(single!(2))) || it == &multiple!(multiple!(single!(6)))
+        })
+        .map(|(idx, _)| idx + 1)
+        .product::<usize>()
 }
 
 #[cfg(test)]
@@ -156,7 +177,6 @@ mod tests {
         #[test]
         fn multiple_list() {
             let expected = multiple!(single!(12), single!(21));
-
             assert_eq!(parse_list("[12, 21]"), expected);
         }
 
