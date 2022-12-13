@@ -13,9 +13,9 @@ macro_rules! multiple {
     };
     ( $( $x:expr ),* ) => {
         {
-            let mut temp_vec : Vec<Box<crate::day13::List>> = Vec::new();
+            let mut temp_vec : Vec<crate::day13::List> = Vec::new();
             $(
-                temp_vec.push(Box::new($x));
+                temp_vec.push($x);
             )*
             List::Multiple(temp_vec)
         }
@@ -38,13 +38,13 @@ fn parse_list(input: &str) -> List {
 }
 
 fn build_multiple(input: &mut Peekable<impl Iterator<Item = char>>) -> List {
-    let mut result: Vec<Box<List>> = vec![];
+    let mut result: Vec<List> = vec![];
     while let Some(c) = input.peek() {
         match c {
-            '0'..='9' => result.push(Box::new(build_single(input))),
+            '0'..='9' => result.push(build_single(input)),
             '[' => {
                 input.next();
-                result.push(Box::new(build_multiple(input)))
+                result.push(build_multiple(input))
             }
             ']' => {
                 input.next();
@@ -75,7 +75,7 @@ fn build_single(input: &mut Peekable<impl Iterator<Item = char>>) -> List {
 #[derive(Clone, Debug, Eq, PartialEq)]
 enum List {
     Single(usize),
-    Multiple(Vec<Box<List>>),
+    Multiple(Vec<List>),
 }
 impl PartialOrd for List {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
@@ -96,12 +96,9 @@ impl Ord for List {
                 }
                 l.len().cmp(&r.len())
             }
+            (List::Multiple(_), List::Single(_)) => self.cmp(&other.to_list()),
+            (List::Single(_), List::Multiple(_)) => self.to_list().cmp(&other),
             (List::Single(l), List::Single(r)) => l.cmp(r),
-            (List::Multiple(_), List::Single(_)) => self.cmp(&multiple!(other.clone())),
-            (List::Single(l), List::Multiple(r)) => r
-                .get(0)
-                .map(|it| List::Single(*l).cmp(&it))
-                .unwrap_or(Ordering::Greater),
         }
     }
 }
@@ -109,7 +106,13 @@ impl List {
     fn at(&self, idx: usize) -> Option<&List> {
         match self {
             List::Single(_) => None,
-            List::Multiple(v) => v.get(idx).map(|it| it.deref()),
+            List::Multiple(v) => v.get(idx),
+        }
+    }
+    fn to_list(&self) -> List {
+        match self {
+            List::Multiple(_) => self.clone(),
+            List::Single(_) => multiple!(self.clone()),
         }
     }
 }
