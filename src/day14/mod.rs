@@ -10,6 +10,7 @@ struct Boundary {
     min_y: isize,
     max_x: isize,
     max_y: isize,
+    spawn: Pos,
 }
 impl Boundary {
     fn new(top_left: Pos, bottom_right: Pos) -> Self {
@@ -18,6 +19,7 @@ impl Boundary {
             min_y: top_left.1,
             max_x: bottom_right.0,
             max_y: bottom_right.1,
+            spawn: (500, -1),
         }
     }
     fn contains(&self, pos: Pos) -> bool {
@@ -25,6 +27,73 @@ impl Boundary {
     }
     fn relative(&self, pos: Pos) -> Pos {
         (pos.0 - self.min_x, pos.1 - self.min_y)
+    }
+}
+impl From<Vec<String>> for Boundary {
+    fn from(lines: Vec<String>) -> Self {
+        let mut min_x = isize::MAX;
+        let min_y = 0;
+        let mut max_x = 500;
+        let mut max_y = 0;
+
+        for it in lines
+            .iter()
+            .map(|row| row.split(" -> ").collect::<Vec<&str>>())
+            .flatten()
+        {
+            let (x, y) = it.split_once(",").unwrap();
+            let (x, y) = (x.parse().unwrap(), y.parse().unwrap());
+
+            min_x = if x < min_x { x } else { min_x };
+            max_x = if x > max_x { x } else { max_x };
+            max_y = if y > max_y { y } else { max_y };
+        }
+
+        Self {
+            min_x,
+            min_y,
+            max_x,
+            max_y,
+            spawn: (500, -1),
+        }
+    }
+}
+
+#[derive(Debug, PartialEq, Eq)]
+struct Paths {
+    paths: Vec<Path>,
+    boundary: Boundary,
+}
+impl Paths {
+    fn add_ground(&mut self) {
+        self.boundary.max_y += 2;
+
+        let height = self.boundary.max_y - self.boundary.min_y;
+
+        self.boundary.min_x = self.boundary.spawn.0 - height;
+        self.boundary.max_x = self.boundary.spawn.0 + height;
+
+        self.paths.push(Path::new(
+            (self.boundary.min_x, self.boundary.max_y),
+            (self.boundary.max_x, self.boundary.max_y),
+        ));
+    }
+}
+impl From<Vec<String>> for Paths {
+    fn from(lines: Vec<String>) -> Self {
+        let boundary: Boundary = lines.clone().into();
+        let paths: Vec<Path> = lines
+            .iter()
+            .map(|it| {
+                let a: Vec<String> = it.split(" -> ").map(|it| it.to_string()).collect();
+                a.windows(2)
+                    .map(|it| it.to_vec().into())
+                    .collect::<Vec<Path>>()
+            })
+            .flatten()
+            .collect();
+
+        Self { boundary, paths }
     }
 }
 
@@ -155,7 +224,13 @@ impl Cave {
                 self.actual_sand_pos = candidate_pos;
                 Some(true)
             }
-            _ => Some(false),
+            _ => {
+                if candidate_pos == (self.spawn.0, self.spawn.1 + 1) {
+                    return None;
+                } else {
+                    return Some(false);
+                }
+            }
         }
     }
 }
@@ -173,32 +248,24 @@ impl Display for Cave {
         write!(f, "{}", blocks)
     }
 }
-impl From<Vec<Path>> for Cave {
-    fn from(paths: Vec<Path>) -> Self {
-        let spawn = (500, 0);
+impl From<Paths> for Cave {
+    fn from(paths: Paths) -> Self {
+        let boundary = paths.boundary;
+        let paths = paths.paths;
 
-        let mut min_x = isize::MAX;
-        let min_y = 0;
-        let mut max_x = 500;
-        let mut max_y = 0;
-
-        paths.iter().for_each(|it| {
-            let min = it.min().unwrap();
-            let max = it.max().unwrap();
-            min_x = if min.0 < min_x { min.0 } else { min_x };
-            max_x = if max.0 > max_x { max.0 } else { max_x };
-            max_y = if max.1 > max_y { max.1 } else { max_y };
-        });
-
-        let blocks = (min_x..=max_x)
-            .map(|_| (min_y..=max_y).map(|_| Some(Block::Void)).collect())
+        let blocks = (boundary.min_x..=boundary.max_x)
+            .map(|_| {
+                (boundary.min_y..=boundary.max_y)
+                    .map(|_| Some(Block::Void))
+                    .collect()
+            })
             .collect();
 
         let mut cave = Self {
             blocks,
-            actual_sand_pos: spawn,
-            spawn,
-            boundary: Boundary::new((min_x, min_y), (max_x, max_y)),
+            actual_sand_pos: boundary.spawn,
+            spawn: boundary.spawn,
+            boundary,
             sands: 0,
         };
 
@@ -214,29 +281,39 @@ impl From<Vec<Path>> for Cave {
 }
 
 pub fn run() {
-    let mut cave = create_cave(lines(read_input(14)));
+    let mut cave: Cave = create_cave(&read_input(14));
     println!("Part1: {}", cave.run());
-    println!("{}", cave);
+
+    let mut cave: Cave = create_cave_with_ground(&read_input(14));
+    println!("Part2: {}", cave.run());
 }
 
-fn create_cave(lines: Vec<String>) -> Cave {
-    lines
-        .iter()
-        .map(|it| {
-            let a: Vec<String> = it.split(" -> ").map(|it| it.to_string()).collect();
-            a.windows(2)
-                .map(|it| it.to_vec().into())
-                .collect::<Vec<Path>>()
-        })
-        .flatten()
-        .collect::<Vec<Path>>()
-        .into()
+fn create_cave(input: &str) -> Cave {
+    let paths: Paths = lines(input.to_string()).into();
+    paths.into()
+}
+
+fn create_cave_with_ground(input: &str) -> Cave {
+    let mut paths: Paths = lines(input.to_string()).into();
+    paths.add_ground();
+    paths.into()
 }
 
 #[cfg(test)]
 mod tests {
     mod boundary {
         use crate::day14::Boundary;
+
+        #[test]
+        fn parse_boundary() {
+            let boundary: Boundary = vec![
+                "498,4 -> 498,6 -> 496,6".to_string(),
+                "503,4 -> 502,4 -> 502,9 -> 494,9".to_string(),
+            ]
+            .into();
+
+            assert_eq!(boundary, Boundary::new((494, 0), (503, 9)));
+        }
 
         #[test]
         fn contains() {
@@ -256,14 +333,14 @@ mod tests {
     }
 
     mod path {
-        use crate::day14::Path;
+        use crate::day14::{Path, Paths};
 
         #[test]
         fn parse_path() {
-            let expected_path = Path::new((0, 0), (0, 2));
-            let path: Path = vec!["0,0".to_string(), "0,2".to_string()].into();
+            let expected_paths = vec![Path::new((0, 0), (0, 2))];
+            let paths: Paths = vec!["0,0 -> 0,2".to_string()].into();
 
-            assert_eq!(path, expected_path);
+            assert_eq!(paths.paths, expected_paths);
         }
 
         #[test]
@@ -313,29 +390,23 @@ mod tests {
     }
 
     mod cave {
-        use crate::{
-            day14::{create_cave, Block, Boundary, Cave, Path},
-            utils::lines,
-        };
+        use crate::day14::{create_cave, create_cave_with_ground, Block, Boundary, Cave};
 
         #[test]
         fn parse_cave() {
-            let paths = vec![Path::new((498, 4), (498, 6))];
-            let cave: Cave = paths.into();
-            assert_eq!(cave.spawn, (500, 0));
+            let cave: Cave = create_cave("498,4 -> 498,6");
+
+            assert_eq!(cave.spawn, (500, -1));
             assert_eq!(cave.boundary, Boundary::new((498, 0), (500, 6)));
         }
 
         #[test]
         fn find_at() {
-            let paths = vec![Path::new((498, 4), (498, 6))];
-            let cave: Cave = paths.into();
+            let cave: Cave = create_cave("498,4 -> 498,6");
             assert_eq!(cave.at((498, 4)), Some(Block::Rock));
             assert_eq!(cave.at((498, 5)), Some(Block::Rock));
             assert_eq!(cave.at((498, 6)), Some(Block::Rock));
-            assert_eq!(cave.at((498, 6)), Some(Block::Rock));
-            assert_eq!(cave.at((500, 0)), Some(Block::Sand));
-            assert_eq!(cave.at((500, 1)), Some(Block::Void));
+            assert_eq!(cave.at((500, 0)), Some(Block::Void));
             assert_eq!(cave.at((501, 0)), None);
             assert_eq!(cave.at((497, 0)), None);
             assert_eq!(cave.at((500, -1)), None);
@@ -344,16 +415,15 @@ mod tests {
 
         #[test]
         fn set_at() {
-            let paths = vec![Path::new((498, 4), (498, 6))];
-            let mut cave: Cave = paths.into();
+            let mut cave: Cave = create_cave("498,4 -> 498,6");
             cave.set((500, 1), Block::Sand);
             assert_eq!(cave.at((500, 1)), Some(Block::Sand));
         }
 
         #[test]
         fn move_sand_bottom() {
-            let paths = vec![Path::new((498, 2), (502, 2))];
-            let mut cave: Cave = paths.into();
+            let mut cave: Cave = create_cave("500,2 -> 500,2");
+            assert_eq!(cave.try_bottom(), Some(true));
             assert_eq!(cave.try_bottom(), Some(true));
             assert_eq!(cave.try_bottom(), Some(false));
             assert_eq!(cave.at((500, 0)), Some(Block::Void));
@@ -362,8 +432,8 @@ mod tests {
 
         #[test]
         fn move_sand_bottom_left() {
-            let paths = vec![Path::new((498, 2), (502, 2)), Path::new((500, 1), (500, 1))];
-            let mut cave: Cave = paths.into();
+            let mut cave: Cave = create_cave("498,2 -> 502,2\n500,1 -> 500,2");
+            cave.try_bottom();
             assert_eq!(cave.try_bottom_left(), Some(true));
             assert_eq!(cave.try_bottom_left(), Some(false));
             assert_eq!(cave.at((500, 0)), Some(Block::Void));
@@ -372,8 +442,8 @@ mod tests {
 
         #[test]
         fn move_sand_bottom_right() {
-            let paths = vec![Path::new((498, 2), (502, 2)), Path::new((500, 1), (500, 1))];
-            let mut cave: Cave = paths.into();
+            let mut cave: Cave = create_cave("498,2 -> 502,2\n500,1 -> 500,1");
+            cave.try_bottom();
             assert_eq!(cave.try_bottom_right(), Some(true));
             assert_eq!(cave.try_bottom_right(), Some(false));
             assert_eq!(cave.at((500, 0)), Some(Block::Void));
@@ -382,19 +452,25 @@ mod tests {
 
         #[test]
         fn fall_outside() {
-            let paths = vec![Path::new((498, 1), (498, 1))];
-            let mut cave: Cave = paths.into();
+            let mut cave: Cave = create_cave("498,1 -> 498,1");
+            assert_eq!(cave.try_bottom(), Some(true));
             assert_eq!(cave.try_bottom(), Some(true));
             assert_eq!(cave.try_bottom(), None);
         }
 
         #[test]
         fn part1() {
-            let lines =
-                lines("498,4 -> 498,6 -> 496,6\n503,4 -> 502,4 -> 502,9 -> 494,9\n".to_string());
-
-            let mut cave = create_cave(lines);
+            let mut cave: Cave =
+                create_cave("498,4 -> 498,6 -> 496,6\n503,4 -> 502,4 -> 502,9 -> 494,9\n");
             assert_eq!(cave.run(), 24);
+        }
+
+        #[test]
+        fn part2() {
+            let mut cave: Cave = create_cave_with_ground(
+                "498,4 -> 498,6 -> 496,6\n503,4 -> 502,4 -> 502,9 -> 494,9\n",
+            );
+            assert_eq!(cave.run(), 93);
         }
     }
 }
