@@ -38,10 +38,31 @@ impl Solver {
             values,
         }
     }
-    fn solve(&self) -> usize {
+    fn solve1(&self) -> usize {
         let mut paths = HashMap::new();
         self.try_permutations(&mut paths, Path::new(), "AA".to_string(), 30, 0);
         paths.iter().map(|(_, score)| score).max().unwrap().clone()
+    }
+    fn solve2(&self) -> usize {
+        let mut paths = HashMap::new();
+        self.try_permutations(&mut paths, Path::new(), "AA".to_string(), 26, 0);
+
+        let candidate_paths: HashSet<(Path, usize)> =
+            paths.into_iter().filter(|(p, _)| p.len() > 0).collect();
+
+        let mut top = 0;
+
+        for (i, f) in candidate_paths.iter().enumerate() {
+            for t in candidate_paths.iter().skip(i) {
+                if f.0.len() + t.0.len() <= self.values.len()
+                    && f.0.as_hashset().is_disjoint(&t.0.as_hashset())
+                {
+                    top = top.max(f.1 + t.1);
+                }
+            }
+        }
+
+        top
     }
     fn try_permutations(
         &self,
@@ -89,12 +110,7 @@ impl Path {
 }
 impl Hash for Path {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        self.path
-            .iter()
-            .map(|it| it.clone())
-            .collect::<Vec<String>>()
-            .join("")
-            .hash(state)
+        self.path.join("").hash(state)
     }
 }
 impl Deref for Path {
@@ -151,7 +167,8 @@ pub fn run() {
     }
 
     let solver = Solver::new(nodes.into_iter().collect::<Vec<_>>(), distances, values);
-    println!("Part1: {}", solver.solve());
+    println!("Part1: {}", solver.solve1());
+    println!("Part2: {}", solver.solve2());
 }
 
 fn parse_line(line: String) -> (String, usize, Vec<String>) {
