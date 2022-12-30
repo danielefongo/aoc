@@ -1,4 +1,4 @@
-use std::collections::{HashSet, VecDeque};
+use std::collections::{HashMap, HashSet, VecDeque};
 
 use crate::utils::{extract, extract_one, lines, read_input};
 
@@ -36,6 +36,7 @@ fn execute_blueprint(blueprint: Blueprint, end: i32) -> i32 {
 
     let mut visited: HashSet<Blueprint> = HashSet::new();
     let mut queue: VecDeque<Blueprint> = VecDeque::new();
+    let mut best_ores_by_iteration: HashMap<i32, i32> = HashMap::new();
     let mut best = blueprint.clone();
     let target = 0;
 
@@ -47,8 +48,28 @@ fn execute_blueprint(blueprint: Blueprint, end: i32) -> i32 {
         }
         visited.insert(blueprint.clone());
 
+        let mut best_blueprint = blueprint.clone();
+        best_blueprint.make_robot_free(target);
+        while best_blueprint.iterations < end {
+            best_blueprint.produce(target);
+        }
+        if best_blueprint.ores[target] <= best.ores[target] {
+            continue;
+        }
+
         let mut ended_blueprint = blueprint.clone();
-        ended_blueprint.farm(end - blueprint.iterations);
+        ended_blueprint.farm(1);
+
+        if &ended_blueprint.ores[target]
+            < best_ores_by_iteration
+                .get(&ended_blueprint.iterations)
+                .unwrap_or(&0)
+        {
+            continue;
+        }
+        best_ores_by_iteration.insert(ended_blueprint.iterations, ended_blueprint.ores[target]);
+
+        ended_blueprint.farm(end - blueprint.iterations - 1);
         if ended_blueprint.ores[target] > best.ores[target] {
             best = ended_blueprint.clone();
         }
@@ -68,7 +89,7 @@ fn execute_blueprint(blueprint: Blueprint, end: i32) -> i32 {
             new_blueprint.farm(needed_rounds - 1);
             new_blueprint.produce(ore);
 
-            queue.push_back(new_blueprint);
+            queue.push_front(new_blueprint);
         }
     }
 
@@ -112,6 +133,9 @@ impl Blueprint {
             .collect();
 
         self.iterations += rounds;
+    }
+    fn make_robot_free(&mut self, robot: usize) {
+        self.costs[robot] = vec![0, 0, 0, 0];
     }
     fn produce(&mut self, robot: usize) -> bool {
         let costs = self.costs[robot].clone();
