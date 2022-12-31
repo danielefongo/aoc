@@ -19,44 +19,43 @@ fn get_mut<'a, T: Hash + Eq + Clone, Z: Default>(
 }
 
 struct Solver {
-    nodes: HashSet<String>,
-    distances: HashMap<String, HashMap<String, usize>>,
-    values: HashMap<String, usize>,
+    mapping: HashMap<String, u64>,
+    distances: HashMap<u64, HashMap<u64, usize>>,
+    values: HashMap<u64, usize>,
 }
 impl Solver {
     fn new(
-        nodes: Vec<String>,
-        distances: HashMap<String, HashMap<String, usize>>,
-        values: HashMap<String, usize>,
+        mapping: HashMap<String, u64>,
+        distances: HashMap<u64, HashMap<u64, usize>>,
+        values: HashMap<u64, usize>,
     ) -> Self {
         Self {
-            nodes: nodes
-                .into_iter()
-                .filter(|it| values.get(it).unwrap() > &0)
-                .collect::<HashSet<_>>(),
+            mapping,
             distances,
             values,
         }
     }
     fn solve1(&self) -> usize {
         let mut paths = HashMap::new();
-        self.try_permutations(&mut paths, Path::new(), "AA".to_string(), 30, 0);
+        let input = self.mapping.get("AA").unwrap().clone();
+        self.try_permutations(&mut paths, 0, input, 30, 0);
         paths.iter().map(|(_, score)| score).max().unwrap().clone()
     }
     fn solve2(&self) -> usize {
         let mut paths = HashMap::new();
-        self.try_permutations(&mut paths, Path::new(), "AA".to_string(), 26, 0);
+        let input = self.mapping.get("AA").unwrap().clone();
+        self.try_permutations(&mut paths, 0, input, 26, 0);
 
-        let candidate_paths: HashSet<(Path, usize)> =
-            paths.into_iter().filter(|(p, _)| p.len() > 0).collect();
+        let mut candidate_paths: Vec<(u64, usize)> =
+            paths.into_iter().filter(|(p, _)| p > &0).collect();
+        candidate_paths.sort();
+        candidate_paths.reverse();
 
         let mut top = 0;
 
         for (i, f) in candidate_paths.iter().enumerate() {
             for t in candidate_paths.iter().skip(i) {
-                if f.0.len() + t.0.len() <= self.values.len()
-                    && f.0.as_hashset().is_disjoint(&t.0.as_hashset())
-                {
+                if f.0 & t.0 == 0 {
                     top = top.max(f.1 + t.1);
                 }
             }
@@ -66,25 +65,32 @@ impl Solver {
     }
     fn try_permutations(
         &self,
-        paths: &mut HashMap<Path, usize>,
-        visited_path: Path,
-        actual_node: String,
+        paths: &mut HashMap<u64, usize>,
+        visited_path: u64,
+        actual_node: u64,
         time_remaining: usize,
         score: usize,
     ) {
-        for target_node in self.nodes.difference(&visited_path.as_hashset()) {
+        for target_node in self.mapping.values() {
+            if visited_path & target_node > 0 {
+                continue;
+            }
+
             let distance = get(&self.distances, &actual_node, &target_node).clone();
 
             if time_remaining >= distance + 1 {
                 let target_flow = self.values.get(target_node).unwrap().clone();
 
+                if target_flow == 0 {
+                    continue;
+                }
+
                 let time_remaining = time_remaining - distance - 1;
                 let score = score + time_remaining * target_flow;
 
-                let mut path = visited_path.clone();
-                path.push(target_node.clone());
+                let path = visited_path | target_node;
 
-                let visited_path_score = paths.get(&visited_path).unwrap_or(&0);
+                let visited_path_score = paths.get(&path).unwrap_or(&0);
                 paths.insert(path.clone(), score.max(visited_path_score.clone()));
 
                 self.try_permutations(paths, path, target_node.clone(), time_remaining, score)
@@ -127,20 +133,36 @@ impl DerefMut for Path {
 }
 
 pub fn run() {
-    let mut connections: HashMap<String, HashSet<String>> = HashMap::new();
-    let mut distances: HashMap<String, HashMap<String, usize>> = HashMap::new();
-    let mut values: HashMap<String, usize> = HashMap::new();
-    let mut nodes: HashSet<String> = HashSet::new();
+    let mut mapping: HashMap<String, u64> = HashMap::new();
+    let mut connections: HashMap<u64, HashSet<u64>> = HashMap::new();
+    let mut distances: HashMap<u64, HashMap<u64, usize>> = HashMap::new();
+    let mut values: HashMap<u64, usize> = HashMap::new();
+    let mut nodes: HashSet<u64> = HashSet::new();
+
+    lines(read_input(16))
+        .into_iter()
+        .enumerate()
+        .for_each(|(idx, input)| {
+            let from = extract_one(&input, "Valve \\w+").replace("Valve ", "");
+            let value = (2 as u64).pow(idx as u32);
+            mapping.insert(from.clone(), value);
+        });
 
     lines(read_input(16))
         .into_iter()
         .map(parse_line)
-        .for_each(|(from, rate, tos)| {
-            let hashset = tos.clone().into_iter().collect::<HashSet<String>>();
-            *connections.entry(from.clone()).or_insert(HashSet::new()) = hashset;
+        .enumerate()
+        .for_each(|(idx, (from, rate, tos))| {
+            let hashset = tos
+                .clone()
+                .into_iter()
+                .map(|it| mapping.get(&it).unwrap().clone())
+                .collect::<HashSet<u64>>();
+            let from_value = mapping.get(&from).unwrap().clone();
 
-            nodes.insert(from.clone());
-            values.insert(from.clone(), rate);
+            *connections.entry(from_value).or_insert(HashSet::new()) = hashset;
+            nodes.insert(from_value);
+            values.insert(from_value, rate);
         });
 
     connections.keys().into_iter().for_each(|f| {
@@ -166,7 +188,7 @@ pub fn run() {
         }
     }
 
-    let solver = Solver::new(nodes.into_iter().collect::<Vec<_>>(), distances, values);
+    let solver = Solver::new(mapping, distances, values);
     println!("Part1: {}", solver.solve1());
     println!("Part2: {}", solver.solve2());
 }
