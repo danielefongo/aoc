@@ -1,6 +1,3 @@
-mod day16;
-mod utils;
-
 fn main() {
-    day16::run();
+    println!("Welcome to the league of AOC");
 }
