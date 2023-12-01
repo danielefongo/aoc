@@ -3,8 +3,7 @@ use std::{
     fmt::Display,
 };
 
-use regex::Regex;
-use utils::{lines, read_input};
+use utils::{extract, lines, matches, read_input};
 
 #[derive(Debug)]
 struct Cargo {
@@ -111,15 +110,12 @@ impl Move {
 }
 impl From<String> for Move {
     fn from(line: String) -> Self {
-        let valid_input = Regex::new("move \\d+ from \\d+ to \\d+").unwrap();
-
-        if !valid_input.is_match(&line) {
+        if !matches(&line, "move \\d+ from \\d+ to \\d+") {
             panic!("invalid input")
-        };
+        }
 
-        let numbers: Vec<usize> = Regex::new("\\d+")
-            .unwrap()
-            .find_iter(&line)
+        let numbers: Vec<usize> = extract(&line, "\\d+")
+            .into_iter()
             .filter_map(|digits| digits.as_str().parse().ok())
             .collect();
 
