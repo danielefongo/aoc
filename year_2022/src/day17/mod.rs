@@ -428,10 +428,7 @@ mod test {
     }
 
     mod cave {
-        use crate::{
-            day17::{Block, Cave, Kind, Pos},
-            utils::{lines, read_input},
-        };
+        use crate::day17::{Block, Cave, Kind, Pos};
 
         #[test]
         fn generate_cave() {

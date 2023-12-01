@@ -152,7 +152,7 @@ pub fn run() {
         .into_iter()
         .map(parse_line)
         .enumerate()
-        .for_each(|(idx, (from, rate, tos))| {
+        .for_each(|(_idx, (from, rate, tos))| {
             let hashset = tos
                 .clone()
                 .into_iter()

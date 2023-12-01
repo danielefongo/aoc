@@ -18,7 +18,6 @@ impl Cargo {
                     .unwrap()
                     .get(0)
                     .unwrap()
-                    .clone()
                     .to_string()
             })
             .collect()

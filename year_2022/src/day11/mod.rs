@@ -173,7 +173,7 @@ fn part2(monkeys: &mut HashMap<usize, Monkey>) {
         .reduce(|a, b| a * b)
         .unwrap();
     (0..monkeys.len()).for_each(|monkey_idx| {
-        let mut monkey = monkeys.get_mut(&monkey_idx).unwrap();
+        let monkey = monkeys.get_mut(&monkey_idx).unwrap();
         monkey.bound = bound;
         monkey.worry_level_divider = 1;
     });

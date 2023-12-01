@@ -1,4 +1,4 @@
-use std::{cmp::Ordering, iter::Peekable, ops::Deref};
+use std::{cmp::Ordering, iter::Peekable};
 
 use utils::{lines, read_input};
 
