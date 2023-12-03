@@ -5,7 +5,7 @@ use utils::{lines, read_input};
 pub fn run() {
     let snafus: Vec<Snafu> = lines(read_input!()).into_iter().map(Snafu::from).collect();
     let sum = snafus.iter().sum::<Snafu>();
-    println!("Part1: {}", sum.to_string());
+    println!("Part1: {}", sum);
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -18,7 +18,7 @@ impl From<Snafu> for Decimal {
                 .iter()
                 .rev()
                 .enumerate()
-                .map(|(pow, value)| value * (5 as i64).pow(pow as u32))
+                .map(|(pow, value)| value * 5_i64.pow(pow as u32))
                 .sum(),
         )
     }
@@ -35,7 +35,7 @@ impl Snafu {
 }
 impl<'a> Sum<&'a Snafu> for Snafu {
     fn sum<I: Iterator<Item = &'a Snafu>>(iter: I) -> Self {
-        let decimal = Decimal(iter.map(|it| Decimal::from(it.clone()).0.clone()).sum());
+        let decimal = Decimal(iter.map(|it| Decimal::from(it.clone()).0).sum());
         Self::from(decimal)
     }
     // fn sum<I: Iterator<Item = &Snafu>>(iter: I) -> Self {
@@ -66,7 +66,6 @@ impl From<String> for Snafu {
     fn from(input: String) -> Self {
         let values: Vec<i64> = input
             .chars()
-            .into_iter()
             .map(|it| match it {
                 '2' => 2,
                 '1' => 1,
@@ -99,11 +98,11 @@ impl From<Decimal> for Snafu {
             };
 
             value.insert(power, digit * xs);
-            x = x - candidate * digit * xs;
+            x -= candidate * digit * xs;
         }
 
         let values = (0..=*value.keys().max().unwrap())
-            .map(|it| value.get(&it).unwrap_or(&0).clone())
+            .map(|it| *value.get(&it).unwrap_or(&0))
             .rev()
             .collect::<Vec<i64>>();
 
@@ -129,7 +128,7 @@ impl Iterator for Counter {
 }
 
 fn five_pow(power: u32) -> i64 {
-    (5 as i64).pow(power)
+    5_i64.pow(power)
 }
 
 #[cfg(test)]

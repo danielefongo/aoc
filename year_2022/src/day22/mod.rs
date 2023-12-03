@@ -108,7 +108,7 @@ struct Map {
     dir: Dir,
 }
 impl Map {
-    fn do_step(&mut self, step: &Step, pos_calculator: &Box<dyn PosCalculator>) {
+    fn do_step(&mut self, step: &Step, pos_calculator: &dyn PosCalculator) {
         match step {
             Step::Straight(steps) => {
                 let mut count = 0;
@@ -147,7 +147,6 @@ impl From<Vec<String>> for Map {
             .enumerate()
             .flat_map(|(y, row)| {
                 row.chars()
-                    .into_iter()
                     .enumerate()
                     .flat_map(|(x, char)| Kind::try_from(char).map(|kind| (x, kind)))
                     .map(|(x, kind)| {
@@ -157,13 +156,12 @@ impl From<Vec<String>> for Map {
                     .collect::<Vec<(Pos, Kind)>>()
             })
             .collect();
-        let actual_pos = fields
+        let actual_pos = *fields
             .iter()
             .filter(|(_, it)| *it == &Kind::Free)
             .map(|it| it.0)
             .min_by(|Pos(x1, y1), Pos(x2, y2)| (y1, x1).cmp(&(y2, x2)))
-            .unwrap()
-            .clone();
+            .unwrap();
 
         let max_x = fields.keys().map(|it| it.0).max().unwrap();
         let max_y = fields.keys().map(|it| it.1).max().unwrap();
@@ -306,7 +304,7 @@ impl PosCalculator for Roll {
             while self.fields.get(&rolled).is_none() {
                 rolled = rolled.move_to(&dir, 1);
             }
-            (rolled.clone(), dir)
+            (rolled, dir)
         }
     }
 }
@@ -319,7 +317,7 @@ impl PosCalculator for Cube {
     fn next_pos(&self, from: Pos, dir: Dir) -> (Pos, Dir) {
         let moved_pos = from.move_to(&dir, 1);
 
-        if let Some(_) = self.find_by_pos(moved_pos) {
+        if self.find_by_pos(moved_pos).is_some() {
             (moved_pos, dir)
         } else {
             let from_facet = self.find_by_pos(from).unwrap();
@@ -346,12 +344,11 @@ impl PosCalculator for Cube {
             let direction = to_from_dir.opposite();
 
             let pos = if same_edge_direction {
-                second_edge.get(actual_edge_idx).unwrap().clone()
+                *second_edge.get(actual_edge_idx).unwrap()
             } else {
-                second_edge
+                *second_edge
                     .get((from_facet.size - 1 - actual_edge_idx as i32) as usize)
                     .unwrap()
-                    .clone()
             };
 
             (pos, direction)
@@ -365,7 +362,7 @@ impl From<&Map> for Cube {
             facets: Vec::new(),
         };
 
-        cube.build(map, map.actual_pos.clone(), Face::Top);
+        cube.build(map, map.actual_pos, Face::Top);
         cube
     }
 }
@@ -392,14 +389,15 @@ impl Cube {
                         face.go_to(relative_face, &dir).unwrap()
                     };
 
-                    if !self.edges.contains_key(&face) {
+                    if let std::collections::hash_map::Entry::Vacant(e) = self.edges.entry(face) {
                         self.facets.push(Facet::new(face, facet_start, facet_end));
-                        self.edges.insert(face, (dir, new_face));
+                        e.insert((dir, new_face));
                     }
-                    if !self.edges.contains_key(&new_face) {
+                    if let std::collections::hash_map::Entry::Vacant(e) = self.edges.entry(new_face)
+                    {
                         self.facets
                             .push(Facet::new(new_face, new_facet_start, new_facet_end));
-                        self.edges.insert(new_face, (dir.opposite(), face));
+                        e.insert((dir.opposite(), face));
                         self.build(map, new_facet_start, new_face)
                     }
                 }
@@ -429,13 +427,13 @@ pub fn run() {
 
     lines.pop();
     let mut first_map = Map::from(lines.clone());
-    let roll: Box<dyn PosCalculator> = Box::new(Roll::from(&first_map));
+    let roll = Roll::from(&first_map);
 
     let mut second_map = Map::from(lines);
-    let cube: Box<dyn PosCalculator> = Box::new(Cube::from(&second_map));
+    let cube = Cube::from(&second_map);
 
-    let mut step_iter = steps.steps.iter();
-    while let Some(step) = step_iter.next() {
+    let step_iter = steps.steps.iter();
+    for step in step_iter {
         first_map.do_step(step, &roll);
         second_map.do_step(step, &cube);
     }

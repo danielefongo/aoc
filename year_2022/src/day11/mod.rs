@@ -28,8 +28,8 @@ enum Value {
 impl Value {
     fn get(&self, value: &usize) -> usize {
         match self {
-            Value::Old => value.clone(),
-            Value::Int(val) => val.clone(),
+            Value::Old => *value,
+            Value::Int(val) => *val,
         }
     }
 }
@@ -88,7 +88,7 @@ impl Operation {
 impl From<String> for Operation {
     fn from(input: String) -> Self {
         let data = input
-            .split(" ")
+            .split(' ')
             .map(|it| it.to_owned())
             .collect::<Vec<String>>();
 
@@ -134,7 +134,7 @@ impl Monkey {
 }
 impl From<&str> for Monkey {
     fn from(input: &str) -> Self {
-        let inputs = input.split("\n").collect::<Vec<&str>>();
+        let inputs = input.split('\n').collect::<Vec<&str>>();
         let items = extract(inputs[1], "\\d+")
             .iter()
             .map(|it| it.into())

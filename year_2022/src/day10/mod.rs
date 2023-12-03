@@ -12,7 +12,7 @@ impl From<String> for MemoryOp {
         if input == "noop" {
             MemoryOp::Noop
         } else if input.starts_with("addx") {
-            let (_, value) = input.split_once(" ").unwrap();
+            let (_, value) = input.split_once(' ').unwrap();
             MemoryOp::Add(value.parse().unwrap())
         } else {
             panic!("invalid input")
@@ -35,11 +35,10 @@ impl From<Vec<MemoryOp>> for CpuOps {
     fn from(ops: Vec<MemoryOp>) -> Self {
         let ops: Vec<CpuOp> = ops
             .iter()
-            .map(|it| match it {
-                MemoryOp::Add(val) => vec![CpuOp::Loading, CpuOp::Add(val.clone())],
+            .flat_map(|it| match it {
+                MemoryOp::Add(val) => vec![CpuOp::Loading, CpuOp::Add(*val)],
                 MemoryOp::Noop => vec![CpuOp::Noop],
             })
-            .flatten()
             .collect();
         Self { ops }
     }
@@ -87,11 +86,11 @@ impl Iterator for Register {
     }
 }
 
-struct CRT {
+struct Crt {
     register: Register,
     lines: Vec<String>,
 }
-impl CRT {
+impl Crt {
     fn new(ops: CpuOps) -> Self {
         Self {
             register: Register::new(ops),
@@ -150,7 +149,7 @@ fn part1(ops: CpuOps) {
 }
 
 fn part2(ops: CpuOps) {
-    let mut crt = CRT::new(ops);
+    let mut crt = Crt::new(ops);
     crt.run();
     println!("Part2:");
     crt.lines.iter().for_each(|it| println!("{}", it));

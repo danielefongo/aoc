@@ -14,8 +14,8 @@ fn get_mut<'a, T: Hash + Eq + Clone, Z: Default>(
     f: &T,
     t: &T,
 ) -> &'a mut Z {
-    let inner = hashmap.entry(f.clone()).or_insert(HashMap::new());
-    inner.entry(t.clone()).or_insert(Z::default())
+    let inner = hashmap.entry(f.clone()).or_default();
+    inner.entry(t.clone()).or_default()
 }
 
 struct Solver {
@@ -37,13 +37,13 @@ impl Solver {
     }
     fn solve1(&self) -> usize {
         let mut paths = HashMap::new();
-        let input = self.mapping.get("AA").unwrap().clone();
+        let input = *self.mapping.get("AA").unwrap();
         self.try_permutations(&mut paths, 0, input, 30, 0);
-        paths.iter().map(|(_, score)| score).max().unwrap().clone()
+        *paths.values().max().unwrap()
     }
     fn solve2(&self) -> usize {
         let mut paths = HashMap::new();
-        let input = self.mapping.get("AA").unwrap().clone();
+        let input = *self.mapping.get("AA").unwrap();
         self.try_permutations(&mut paths, 0, input, 26, 0);
 
         let mut candidate_paths: Vec<(u64, usize)> =
@@ -76,10 +76,10 @@ impl Solver {
                 continue;
             }
 
-            let distance = get(&self.distances, &actual_node, &target_node).clone();
+            let distance = *get(&self.distances, &actual_node, target_node);
 
-            if time_remaining >= distance + 1 {
-                let target_flow = self.values.get(target_node).unwrap().clone();
+            if time_remaining > distance {
+                let target_flow = *self.values.get(target_node).unwrap();
 
                 if target_flow == 0 {
                     continue;
@@ -91,9 +91,9 @@ impl Solver {
                 let path = visited_path | target_node;
 
                 let visited_path_score = paths.get(&path).unwrap_or(&0);
-                paths.insert(path.clone(), score.max(visited_path_score.clone()));
+                paths.insert(path, score.max(*visited_path_score));
 
-                self.try_permutations(paths, path, target_node.clone(), time_remaining, score)
+                self.try_permutations(paths, path, *target_node, time_remaining, score)
             }
         }
     }
@@ -102,17 +102,6 @@ impl Solver {
 #[derive(Clone, Debug, Eq, PartialEq)]
 struct Path {
     path: Vec<String>,
-}
-impl Path {
-    fn new() -> Self {
-        Self { path: Vec::new() }
-    }
-    fn as_hashset(&self) -> HashSet<String> {
-        self.path
-            .iter()
-            .map(|it| it.clone())
-            .collect::<HashSet<String>>()
-    }
 }
 impl Hash for Path {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
@@ -144,7 +133,7 @@ pub fn run() {
         .enumerate()
         .for_each(|(idx, input)| {
             let from = extract_one(&input, "Valve \\w+").replace("Valve ", "");
-            let value = (2 as u64).pow(idx as u32);
+            let value = 2_u64.pow(idx as u32);
             mapping.insert(from.clone(), value);
         });
 
@@ -156,17 +145,17 @@ pub fn run() {
             let hashset = tos
                 .clone()
                 .into_iter()
-                .map(|it| mapping.get(&it).unwrap().clone())
+                .map(|it| *mapping.get(&it).unwrap())
                 .collect::<HashSet<u64>>();
-            let from_value = mapping.get(&from).unwrap().clone();
+            let from_value = *mapping.get(&from).unwrap();
 
-            *connections.entry(from_value).or_insert(HashSet::new()) = hashset;
+            *connections.entry(from_value).or_default() = hashset;
             nodes.insert(from_value);
             values.insert(from_value, rate);
         });
 
-    connections.keys().into_iter().for_each(|f| {
-        connections.keys().into_iter().for_each(|t| {
+    connections.keys().for_each(|f| {
+        connections.keys().for_each(|t| {
             let distance = if connections.get(f).unwrap().contains(t) {
                 1
             } else {
@@ -180,10 +169,10 @@ pub fn run() {
     for k in connections.keys() {
         for i in connections.keys() {
             for j in connections.keys() {
-                let first = get(&distances, i, k).clone();
-                let second = get(&distances, k, j).clone();
+                let first = *get(&distances, i, k);
+                let second = *get(&distances, k, j);
                 let reference = get_mut(&mut distances, i, j);
-                *reference = reference.clone().min(first + second);
+                *reference = (*reference).min(first + second);
             }
         }
     }

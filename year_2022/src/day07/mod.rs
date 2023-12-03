@@ -29,7 +29,7 @@ impl From<&String> for TerminalLine {
         } else if matches(line, "dir \\w") {
             TerminalLine::Dir(line.replace("dir ", ""))
         } else if matches(line, "\\d+ \\w") {
-            let data: Vec<&str> = line.split(" ").collect();
+            let data: Vec<&str> = line.split(' ').collect();
             let first = data[0].parse::<usize>().unwrap();
             let second = data[1];
             TerminalLine::File(second.to_owned(), first)
@@ -64,10 +64,12 @@ impl Folder {
     }
     fn increase_size(&mut self, size: usize) {
         self.size += size;
-        Weak::upgrade(&self.parent).map(|it| it.borrow_mut().increase_size(size));
+        if let Some(it) = Weak::upgrade(&self.parent) {
+            it.borrow_mut().increase_size(size)
+        }
     }
     fn walk(&self, folders: &mut Vec<RcFolder>, filter: &dyn Fn(&RcFolder) -> bool) {
-        self.folders.values().into_iter().for_each(|f| {
+        self.folders.values().for_each(|f| {
             if filter(f) {
                 folders.push(Rc::clone(f));
             }
@@ -105,7 +107,7 @@ pub fn run() {
     );
 }
 
-fn build_tree<'a>(folder: &RcFolder, iter: &'a mut impl Iterator<Item = TerminalLine>) {
+fn build_tree(folder: &RcFolder, iter: &mut impl Iterator<Item = TerminalLine>) {
     if let Some(line) = iter.next() {
         match line {
             TerminalLine::CdTo(subdir) => {
@@ -116,7 +118,7 @@ fn build_tree<'a>(folder: &RcFolder, iter: &'a mut impl Iterator<Item = Terminal
                 build_tree(&Weak::upgrade(&folder.borrow().parent).unwrap(), iter)
             }
             TerminalLine::Dir(name) => {
-                let subdolder = Folder::new(name, Rc::downgrade(&folder));
+                let subdolder = Folder::new(name, Rc::downgrade(folder));
                 folder.borrow_mut().add(Rc::new(RefCell::new(subdolder)));
 
                 build_tree(folder, iter);

@@ -13,17 +13,13 @@ macro_rules! multiple {
     };
     ( $( $x:expr ),* ) => {
         {
-            let mut temp_vec : Vec<crate::day13::List> = Vec::new();
-            $(
-                temp_vec.push($x);
-            )*
-            List::Multiple(temp_vec)
+            List::Multiple(vec![$($x), *])
         }
     };
 }
 
 fn parse_list(input: &str) -> List {
-    let mut input = input.chars().into_iter().peekable();
+    let mut input = input.chars().peekable();
     if let Some(c) = input.peek() {
         match c {
             '0'..='9' => return build_single(&mut input),
@@ -62,7 +58,7 @@ fn build_multiple(input: &mut Peekable<impl Iterator<Item = char>>) -> List {
 fn build_single(input: &mut Peekable<impl Iterator<Item = char>>) -> List {
     let mut number = String::new();
     while let Some(c) = input.peek() {
-        if matches!(c, '0'..='9') {
+        if c.is_ascii_digit() {
             number.push_str(&input.next().unwrap().to_string());
         } else {
             break;
@@ -88,7 +84,7 @@ impl Ord for List {
             (List::Multiple(l), List::Multiple(r)) => {
                 for idx in 0..l.len() {
                     if let Some(right) = r.get(idx) {
-                        match l.get(idx).unwrap().cmp(&right) {
+                        match l.get(idx).unwrap().cmp(right) {
                             Ordering::Equal => continue,
                             ord => return ord,
                         }
@@ -97,30 +93,18 @@ impl Ord for List {
                 l.len().cmp(&r.len())
             }
             (List::Multiple(_), List::Single(_)) => self.cmp(&other.to_list()),
-            (List::Single(_), List::Multiple(_)) => self.to_list().cmp(&other),
+            (List::Single(_), List::Multiple(_)) => self.to_list().cmp(other),
             (List::Single(l), List::Single(r)) => l.cmp(r),
         }
     }
 }
 impl List {
-    fn at(&self, idx: usize) -> Option<&List> {
-        match self {
-            List::Single(_) => None,
-            List::Multiple(v) => v.get(idx),
-        }
-    }
     fn to_list(&self) -> List {
         match self {
             List::Multiple(_) => self.clone(),
             List::Single(_) => multiple!(self.clone()),
         }
     }
-}
-
-fn compare(input1: &str, input2: &str) -> Ordering {
-    let left = parse_list(input1);
-    let right = parse_list(input2);
-    left.cmp(&right)
 }
 
 pub fn run() {
@@ -132,7 +116,7 @@ pub fn run() {
     println!("Part2: {}", part2(&lines));
 }
 
-fn part1(lines: &Vec<String>) -> usize {
+fn part1(lines: &[String]) -> usize {
     lines
         .chunks(2)
         .enumerate()
@@ -145,7 +129,7 @@ fn part1(lines: &Vec<String>) -> usize {
         .sum::<usize>()
 }
 
-fn part2(lines: &Vec<String>) -> usize {
+fn part2(lines: &[String]) -> usize {
     let mut sortable_list = lines.iter().map(|it| parse_list(it)).collect::<Vec<List>>();
 
     sortable_list.sort();
@@ -199,7 +183,13 @@ mod tests {
     mod solving {
         use std::cmp::Ordering;
 
-        use crate::day13::compare;
+        use crate::day13::parse_list;
+
+        fn compare(input1: &str, input2: &str) -> Ordering {
+            let left = parse_list(input1);
+            let right = parse_list(input2);
+            left.cmp(&right)
+        }
 
         #[test]
         fn single() {

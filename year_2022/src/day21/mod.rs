@@ -65,13 +65,13 @@ impl From<String> for Value {
         } else if matches(&input, "\\d+") {
             Value::Int(input.parse().unwrap())
         } else if matches(&input, ".*=.*") {
-            let mut iter = input.split(" ");
+            let mut iter = input.split(' ');
             let first = iter.next().unwrap().to_string();
             iter.next().unwrap().to_string();
             let second = iter.next().unwrap().to_string();
             Value::Equality(first, second)
         } else {
-            let mut iter = input.split(" ");
+            let mut iter = input.split(' ');
             Value::Operation(
                 iter.next().unwrap().to_string(),
                 iter.next().unwrap().into(),
@@ -86,12 +86,12 @@ impl Display for Value {
             Value::Int(val) => val.to_string(),
             Value::Operation(first, op, second) => format!(
                 "{} {} {}",
-                first.to_string(),
-                op.to_string(),
-                second.to_string()
+                first,
+                op,
+                second
             ),
             Value::Equality(first, second) => {
-                format!("{} = {}", first.to_string(), second.to_string())
+                format!("{} = {}", first, second)
             }
             Value::Unknown => "?".to_string(),
         };
@@ -202,25 +202,21 @@ impl Monkeys {
                         };
                     } else {
                         if !first_monkey.evaluated() {
-                            first_monkey
-                                .invert_first()
-                                .map(|m| self.push(&mut equations, m));
-                            first_monkey
-                                .invert_second()
-                                .map(|m| self.push(&mut equations, m));
+                            if let Some(m) = first_monkey
+                                .invert_first() { self.push(&mut equations, m) }
+                            if let Some(m) = first_monkey
+                                .invert_second() { self.push(&mut equations, m) }
 
-                            monkey.invert_first().map(|m| self.push(&mut equations, m));
+                            if let Some(m) = monkey.invert_first() { self.push(&mut equations, m) }
                             self.push(&mut equations, first_monkey.clone());
                         }
                         if !second_monkey.evaluated() {
-                            second_monkey
-                                .invert_first()
-                                .map(|m| self.push(&mut equations, m));
-                            second_monkey
-                                .invert_second()
-                                .map(|m| self.push(&mut equations, m));
+                            if let Some(m) = second_monkey
+                                .invert_first() { self.push(&mut equations, m) }
+                            if let Some(m) = second_monkey
+                                .invert_second() { self.push(&mut equations, m) }
 
-                            monkey.invert_second().map(|m| self.push(&mut equations, m));
+                            if let Some(m) = monkey.invert_second() { self.push(&mut equations, m) }
                             self.push(&mut equations, second_monkey.clone());
                         }
 

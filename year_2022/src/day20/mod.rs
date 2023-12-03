@@ -38,7 +38,7 @@ fn part1(input: Vec<(usize, i128)>, iterations: usize) -> i128 {
 }
 
 fn do_swap(input: &mut Vec<(usize, i128)>, reference: usize) {
-    let (old_pos, (_, movement)) = find(&input, |(idx, _)| idx == &reference);
+    let (old_pos, (_, movement)) = find(input, |(idx, _)| idx == &reference);
     let old_pos = old_pos as i128;
 
     let len = input.len() as i128;
@@ -61,31 +61,16 @@ fn do_swap(input: &mut Vec<(usize, i128)>, reference: usize) {
     };
 
     match shift {
-        s if s < 0 => input.rotate_left(s.abs() as usize),
-        s if s > 0 => input.rotate_right(s.abs() as usize),
+        s if s < 0 => input.rotate_left(s.unsigned_abs() as usize),
+        s if s > 0 => input.rotate_right(s.unsigned_abs() as usize),
         _ => {}
     }
 }
 
-fn find(
-    vec: &Vec<(usize, i128)>,
-    filter: impl Fn(&(usize, i128)) -> bool,
-) -> (usize, (usize, i128)) {
+fn find(vec: &[(usize, i128)], filter: impl Fn(&(usize, i128)) -> bool) -> (usize, (usize, i128)) {
     vec.iter()
         .cloned()
         .enumerate()
         .find(|(_, data)| filter(data))
         .unwrap()
-        .clone()
-}
-
-fn print(prefix: &str, a: &Vec<(usize, i128)>) {
-    println!(
-        "{}: {}",
-        prefix,
-        a.iter()
-            .map(|(_, v)| v.to_string())
-            .collect::<Vec<String>>()
-            .join(", ")
-    )
 }

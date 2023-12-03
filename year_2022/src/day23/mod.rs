@@ -65,20 +65,20 @@ impl Elves {
     }
     fn no_movement_conflicts(&self, from: &Pos) -> bool {
         if let Some(dir) = self.preferred_dir(from) {
-            let other_elf = from.go_to(&dir).go_to(&dir);
-            self.preferred_pos(&other_elf) != self.preferred_pos(&from)
+            let other_elf = from.go_to(dir).go_to(dir);
+            self.preferred_pos(&other_elf) != self.preferred_pos(from)
         } else {
             true
         }
     }
     fn preferred_dir(&self, from: &Pos) -> Option<&Dir> {
-        self.elves.get(&from)?;
+        self.elves.get(from)?;
         self.preferred_dirs
             .iter()
             .find(|dir| self.is_free(from, dir))
     }
     fn preferred_pos(&self, from: &Pos) -> Pos {
-        if !self.has_neighbours(&from) {
+        if !self.has_neighbours(from) {
             return from.clone();
         }
 
@@ -114,7 +114,7 @@ impl Elves {
         }
 
         movements.iter().for_each(|(old_pos, new_pos)| {
-            self.elves.remove(&old_pos);
+            self.elves.remove(old_pos);
             self.elves.insert(new_pos.clone());
         });
 

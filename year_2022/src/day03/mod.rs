@@ -31,7 +31,7 @@ fn split_bag(line: String) -> Vec<String> {
 
 fn find_common_item(data: Vec<String>) -> u32 {
     let first = data.first().unwrap();
-    let others: Vec<String> = data.iter().cloned().skip(1).collect();
+    let others: Vec<String> = data.iter().skip(1).cloned().collect();
 
     let character = first
         .chars()

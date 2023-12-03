@@ -15,7 +15,7 @@ impl Range {
 }
 impl From<String> for Range {
     fn from(input: String) -> Self {
-        let values: Vec<u32> = input.split("-").map(|it| it.parse().unwrap()).collect();
+        let values: Vec<u32> = input.split('-').map(|it| it.parse().unwrap()).collect();
 
         Self {
             min: values[0],
@@ -38,16 +38,16 @@ fn count(filter: impl FnMut(&(Range, Range)) -> bool) -> usize {
 }
 
 fn filter_contains((r1, r2): &(Range, Range)) -> bool {
-    r1.contains(&r2) || r2.contains(&r1)
+    r1.contains(r2) || r2.contains(r1)
 }
 
 fn filter_intersect((r1, r2): &(Range, Range)) -> bool {
-    r1.intersect_left(&r2) || r2.intersect_left(&r1)
+    r1.intersect_left(r2) || r2.intersect_left(r1)
 }
 
 fn to_ranges(input: String) -> (Range, Range) {
     let inputs = input
-        .split(",")
+        .split(',')
         .map(|it| it.to_owned())
         .map(Into::into)
         .collect::<Vec<Range>>();

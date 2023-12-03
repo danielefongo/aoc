@@ -26,7 +26,7 @@ impl Cube {
 }
 impl From<String> for Cube {
     fn from(input: String) -> Self {
-        let values: Vec<i32> = input.split(",").map(|it| it.parse().unwrap()).collect();
+        let values: Vec<i32> = input.split(',').map(|it| it.parse().unwrap()).collect();
         Self(values[0], values[1], values[2])
     }
 }
@@ -45,7 +45,7 @@ fn part1(lava_cubes: &HashSet<Cube>) {
     let mut count = lava_cubes.len() * 6;
     lava_cubes.iter().enumerate().for_each(|(idx, cube1)| {
         lava_cubes.iter().skip(idx + 1).for_each(|cube2| {
-            if cube1.is_near(&cube2) {
+            if cube1.is_near(cube2) {
                 count -= 2;
             }
         })
@@ -81,10 +81,10 @@ fn part2(lava_cubes: &HashSet<Cube>) {
             .filter(|it| !air_block_visited.contains(it))
             .collect::<Vec<_>>()
         {
-            if lava_cubes.contains(&neighbour) {
+            if lava_cubes.contains(neighbour) {
                 count += 1;
             } else if !air_block_visited.contains(neighbour) && !queue.contains(neighbour) {
-                queue.push(neighbour.clone())
+                queue.push(*neighbour)
             }
         }
 

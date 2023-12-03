@@ -9,7 +9,7 @@ pub fn run() {
     println!("Part2: {}", find_marker(&input, 14));
 }
 
-fn find_marker(input: &String, distinct_chars: usize) -> usize {
+fn find_marker(input: &str, distinct_chars: usize) -> usize {
     input
         .chars()
         .collect::<Vec<char>>()

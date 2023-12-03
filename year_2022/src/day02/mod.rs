@@ -65,25 +65,24 @@ enum Strategy {
 }
 
 pub fn run() {
-    let input = read_input!();
-    let strategy = strategy_2;
+    println!("Part1: {:?}", run_part(strategy_1, read_input!()));
+    println!("Part2: {:?}", run_part(strategy_2, read_input!()));
+}
 
+fn run_part(strategy: fn(&str) -> (Hand, Hand), input: String) -> u32 {
     let data: Vec<(Hand, Hand)> = input
-        .split("\n")
+        .split('\n')
         .filter(|it| !it.is_empty())
         .map(strategy)
         .collect();
 
-    let points: u32 = data
-        .iter()
+    data.iter()
         .map(|(other_hand, hand)| hand.points(other_hand))
-        .sum();
-
-    println!("{:?}", points);
+        .sum()
 }
 
 fn strategy_1(line: &str) -> (Hand, Hand) {
-    let hands = line.split(" ").take(2).collect::<Vec<&str>>();
+    let hands = line.split(' ').take(2).collect::<Vec<&str>>();
     let other_hand = hands[0].into();
     let my_hand: Hand = Strategy::One(hands[1].to_owned()).into();
 
@@ -91,7 +90,7 @@ fn strategy_1(line: &str) -> (Hand, Hand) {
 }
 
 fn strategy_2(line: &str) -> (Hand, Hand) {
-    let hands = line.split(" ").take(2).collect::<Vec<&str>>();
+    let hands = line.split(' ').take(2).collect::<Vec<&str>>();
     let other_hand: Hand = hands[0].into();
     let my_hand: Hand = Strategy::Two(hands[1].to_owned(), other_hand.clone()).into();
 

@@ -13,15 +13,6 @@ struct Boundary {
     spawn: Pos,
 }
 impl Boundary {
-    fn new(top_left: Pos, bottom_right: Pos) -> Self {
-        Self {
-            min_x: top_left.0,
-            min_y: top_left.1,
-            max_x: bottom_right.0,
-            max_y: bottom_right.1,
-            spawn: (500, -1),
-        }
-    }
     fn contains(&self, pos: Pos) -> bool {
         pos.0 >= self.min_x && pos.0 <= self.max_x && pos.1 >= self.min_y && pos.1 <= self.max_y
     }
@@ -38,10 +29,9 @@ impl From<Vec<String>> for Boundary {
 
         for it in lines
             .iter()
-            .map(|row| row.split(" -> ").collect::<Vec<&str>>())
-            .flatten()
+            .flat_map(|row| row.split(" -> ").collect::<Vec<&str>>())
         {
-            let (x, y) = it.split_once(",").unwrap();
+            let (x, y) = it.split_once(',').unwrap();
             let (x, y) = (x.parse().unwrap(), y.parse().unwrap());
 
             min_x = if x < min_x { x } else { min_x };
@@ -84,13 +74,12 @@ impl From<Vec<String>> for Paths {
         let boundary: Boundary = lines.clone().into();
         let paths: Vec<Path> = lines
             .iter()
-            .map(|it| {
+            .flat_map(|it| {
                 let a: Vec<String> = it.split(" -> ").map(|it| it.to_string()).collect();
                 a.windows(2)
                     .map(|it| it.to_vec().into())
                     .collect::<Vec<Path>>()
             })
-            .flatten()
             .collect();
 
         Self { boundary, paths }
@@ -120,8 +109,8 @@ impl Path {
 }
 impl From<Vec<String>> for Path {
     fn from(input: Vec<String>) -> Self {
-        let (start_x, start_y) = input[0].split_once(",").unwrap();
-        let (end_x, end_y) = input[1].split_once(",").unwrap();
+        let (start_x, start_y) = input[0].split_once(',').unwrap();
+        let (end_x, end_y) = input[1].split_once(',').unwrap();
 
         let start = (start_x.parse().unwrap(), start_y.parse().unwrap());
         let end = (end_x.parse().unwrap(), end_y.parse().unwrap());
@@ -226,9 +215,9 @@ impl Cave {
             }
             _ => {
                 if candidate_pos == (self.spawn.0, self.spawn.1 + 1) {
-                    return None;
+                    None
                 } else {
-                    return Some(false);
+                    Some(false)
                 }
             }
         }
@@ -270,7 +259,7 @@ impl From<Paths> for Cave {
         };
 
         paths.clone().iter_mut().for_each(|it| {
-            while let Some(pos) = it.next() {
+            for pos in it.by_ref() {
                 cave.set(pos, Block::Rock);
             }
         });
@@ -302,7 +291,7 @@ fn create_cave_with_ground(input: &str) -> Cave {
 #[cfg(test)]
 mod tests {
     mod boundary {
-        use crate::day14::Boundary;
+        use crate::day14::{Boundary, Pos};
 
         #[test]
         fn parse_boundary() {
@@ -318,10 +307,10 @@ mod tests {
         #[test]
         fn contains() {
             let boundary = Boundary::new((0, 0), (2, 2));
-            assert_eq!(boundary.contains((0, 0)), true);
-            assert_eq!(boundary.contains((0, 2)), true);
-            assert_eq!(boundary.contains((2, 0)), true);
-            assert_eq!(boundary.contains((2, 2)), true);
+            assert!(boundary.contains((0, 0)));
+            assert!(boundary.contains((0, 2)));
+            assert!(boundary.contains((2, 0)));
+            assert!(boundary.contains((2, 2)));
         }
 
         #[test]
@@ -329,6 +318,18 @@ mod tests {
             let boundary = Boundary::new((1, 1), (2, 2));
             assert_eq!(boundary.relative((0, 0)), (-1, -1));
             assert_eq!(boundary.relative((3, 3)), (2, 2));
+        }
+
+        impl Boundary {
+            pub fn new(top_left: Pos, bottom_right: Pos) -> Self {
+                Self {
+                    min_x: top_left.0,
+                    min_y: top_left.1,
+                    max_x: bottom_right.0,
+                    max_y: bottom_right.1,
+                    spawn: (500, -1),
+                }
+            }
         }
     }
 

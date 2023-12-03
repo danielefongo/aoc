@@ -27,11 +27,11 @@ impl SensorAndBeacon {
         Self {
             sensor,
             beacon,
-            range: sensor.distance(&beacon) as i32,
+            range: sensor.distance(&beacon),
         }
     }
     fn reaches(&self, point: &Point) -> bool {
-        self.sensor.distance(point) as i32 <= self.range
+        self.sensor.distance(point) <= self.range
     }
     fn near(&self, other: &SensorAndBeacon) -> bool {
         self.range + other.range == self.sensor.distance(&other.sensor) - 2
@@ -94,7 +94,7 @@ pub fn run() {
     part2(&sensors_and_beacons);
 }
 
-fn part1(sensors_and_beacons: &Vec<SensorAndBeacon>) {
+fn part1(sensors_and_beacons: &[SensorAndBeacon]) {
     let y = 2000000;
     let mut min_x = i32::MAX;
     let mut max_x = i32::MIN;
@@ -119,7 +119,7 @@ fn part1(sensors_and_beacons: &Vec<SensorAndBeacon>) {
     println!("Part1: {}", count);
 }
 
-fn part2(sensors_and_beacons: &Vec<SensorAndBeacon>) {
+fn part2(sensors_and_beacons: &[SensorAndBeacon]) {
     let point = sensors_and_beacons
         .iter()
         .cloned()
@@ -127,7 +127,7 @@ fn part2(sensors_and_beacons: &Vec<SensorAndBeacon>) {
             sensors_and_beacons
                 .iter()
                 .skip(1)
-                .flat_map(|second| first.candidates(&second))
+                .flat_map(|second| first.candidates(second))
                 .collect::<Vec<Point>>()
         })
         .find(|&it| sensors_and_beacons.iter().all(|sb| !sb.reaches(&it)))
@@ -158,17 +158,17 @@ mod test {
         #[test]
         fn reaches() {
             let sensor = SensorAndBeacon::new(Point(0, 0), Point(5, 0));
-            assert_eq!(sensor.reaches(&Point(0, 0)), true);
-            assert_eq!(sensor.reaches(&Point(-5, 0)), true);
-            assert_eq!(sensor.reaches(&Point(5, 0)), true);
-            assert_eq!(sensor.reaches(&Point(0, -5)), true);
-            assert_eq!(sensor.reaches(&Point(0, 5)), true);
+            assert!(sensor.reaches(&Point(0, 0)));
+            assert!(sensor.reaches(&Point(-5, 0)));
+            assert!(sensor.reaches(&Point(5, 0)));
+            assert!(sensor.reaches(&Point(0, -5)));
+            assert!(sensor.reaches(&Point(0, 5)));
 
-            assert_eq!(sensor.reaches(&Point(2, 3)), true);
-            assert_eq!(sensor.reaches(&Point(1, 4)), true);
+            assert!(sensor.reaches(&Point(2, 3)));
+            assert!(sensor.reaches(&Point(1, 4)));
 
-            assert_eq!(sensor.reaches(&Point(2, 4)), false);
-            assert_eq!(sensor.reaches(&Point(-1, 5)), false);
+            assert!(!sensor.reaches(&Point(2, 4)));
+            assert!(!sensor.reaches(&Point(-1, 5)));
         }
 
         #[test]
@@ -179,19 +179,19 @@ mod test {
             let sensor4 = SensorAndBeacon::new(Point(2, 2), Point(2, 3));
             let sensor5 = SensorAndBeacon::new(Point(4, 4), Point(6, 4));
 
-            assert_eq!(sensor1.near(&sensor2), true);
-            assert_eq!(sensor1.near(&sensor3), false);
-            assert_eq!(sensor1.near(&sensor4), false);
-            assert_eq!(sensor1.near(&sensor5), false);
+            assert!(sensor1.near(&sensor2));
+            assert!(!sensor1.near(&sensor3));
+            assert!(!sensor1.near(&sensor4));
+            assert!(!sensor1.near(&sensor5));
 
-            assert_eq!(sensor2.near(&sensor3), false);
-            assert_eq!(sensor2.near(&sensor4), false);
-            assert_eq!(sensor2.near(&sensor5), false);
+            assert!(!sensor2.near(&sensor3));
+            assert!(!sensor2.near(&sensor4));
+            assert!(!sensor2.near(&sensor5));
 
-            assert_eq!(sensor3.near(&sensor4), true);
-            assert_eq!(sensor3.near(&sensor5), false);
+            assert!(sensor3.near(&sensor4));
+            assert!(!sensor3.near(&sensor5));
 
-            assert_eq!(sensor4.near(&sensor5), false);
+            assert!(!sensor4.near(&sensor5));
         }
 
         #[test]

@@ -27,7 +27,7 @@ fn walk<T>(initial: T, matrix: &Matrix, updater: fn(&T, usize, Pos, &Matrix) -> 
                 .skip(1)
                 .take(width - 2)
                 .for_each(|(x, &height)| {
-                    actual = updater(&actual, height, (x, y), &matrix);
+                    actual = updater(&actual, height, (x, y), matrix);
                 })
         });
 
@@ -35,24 +35,24 @@ fn walk<T>(initial: T, matrix: &Matrix, updater: fn(&T, usize, Pos, &Matrix) -> 
 }
 
 fn updater1(count: &usize, height: usize, pos: Pos, matrix: &Matrix) -> usize {
-    if tallest(height, right_of(pos, &matrix))
-        || tallest(height, left_of(pos, &matrix))
-        || tallest(height, top_of(pos, &matrix))
-        || tallest(height, bottom_of(pos, &matrix))
+    if tallest(height, right_of(pos, matrix))
+        || tallest(height, left_of(pos, matrix))
+        || tallest(height, top_of(pos, matrix))
+        || tallest(height, bottom_of(pos, matrix))
     {
         count + 1
     } else {
-        count.clone()
+        *count
     }
 }
 
 fn updater2(best: &Option<usize>, height: usize, pos: Pos, matrix: &Matrix) -> Option<usize> {
-    let score = count_of_visible_trees(height, right_of(pos, &matrix))
-        * count_of_visible_trees(height, left_of(pos, &matrix))
-        * count_of_visible_trees(height, top_of(pos, &matrix))
-        * count_of_visible_trees(height, bottom_of(pos, &matrix));
+    let score = count_of_visible_trees(height, right_of(pos, matrix))
+        * count_of_visible_trees(height, left_of(pos, matrix))
+        * count_of_visible_trees(height, top_of(pos, matrix))
+        * count_of_visible_trees(height, bottom_of(pos, matrix));
 
-    best.map(|it| it.max(score)).or_else(|| Some(score))
+    best.map(|it| it.max(score)).or(Some(score))
 }
 
 fn right_of((x, y): (usize, usize), matrix: &Matrix) -> Trees {
@@ -85,12 +85,10 @@ fn count_of_visible_trees(height: usize, other_trees: Trees) -> usize {
 }
 
 fn create_matrix(data: String) -> Matrix {
-    data.split("\n")
-        .into_iter()
+    data.split('\n')
         .filter(|line| !line.is_empty())
         .map(|line| {
             line.chars()
-                .into_iter()
                 .map(|c| c.to_string().parse::<usize>().unwrap())
                 .collect()
         })

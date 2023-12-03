@@ -51,9 +51,9 @@ impl From<String> for Elevations {
     fn from(input: String) -> Self {
         Self {
             palaces: input
-                .split("\n")
+                .split('\n')
                 .enumerate()
-                .map(|(r_idx, row)| {
+                .flat_map(|(r_idx, row)| {
                     row.chars()
                         .enumerate()
                         .map(|(c_idx, palace)| {
@@ -61,13 +61,12 @@ impl From<String> for Elevations {
                             let palace = match palace {
                                 'S' => Palace::new(PalaceType::S, pos, 0),
                                 'E' => Palace::new(PalaceType::E, pos, 25),
-                                it => Palace::new(PalaceType::N, pos, (it as u8) - ('a' as u8)),
+                                it => Palace::new(PalaceType::N, pos, (it as u8) - b'a'),
                             };
                             (pos, palace)
                         })
                         .collect::<Vec<(Pos, Palace)>>()
                 })
-                .flatten()
                 .collect(),
         }
     }
@@ -90,7 +89,7 @@ impl Elevations {
         }
 
         while !queue.is_empty() {
-            let (u_distance, palace) = queue.iter().next().unwrap().clone();
+            let (u_distance, palace) = *queue.iter().next().unwrap();
             let u = palace.pos;
 
             queue.remove(&(u_distance, palace));
@@ -107,7 +106,7 @@ impl Elevations {
                 .collect::<Vec<&Palace>>();
 
             for palace in neighbours {
-                let v = palace.pos.clone();
+                let v = palace.pos;
                 let v_distance = distances.get(&v).unwrap();
                 let alt = u_distance + 1;
 
@@ -119,13 +118,13 @@ impl Elevations {
             }
         }
 
-        self.palaces
+        *self
+            .palaces
             .values()
             .filter(|it| is_end(it))
             .map(|it| distances.get(&it.pos).unwrap())
             .min()
             .unwrap()
-            .clone()
     }
 }
 

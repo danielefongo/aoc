@@ -6,7 +6,7 @@ use std::{
 use utils::read_input;
 
 pub fn run() {
-    let lines = read_input!().replace("\n", "");
+    let lines = read_input!().replace('\n', "");
     println!("Part1: {}", Cave::from(lines.clone()).solve(2022));
     println!("Part2: {}", Cave::from(lines.clone()).solve(1000000000000));
 }
@@ -42,7 +42,7 @@ impl Iterator for MovementGenerator {
     type Item = Movement;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if let Some(_) = self.actual_movement {
+        if self.actual_movement.is_some() {
             if self.tick {
                 self.actual_movement = Some(Movement::Down)
             } else {
@@ -155,6 +155,9 @@ impl Spawner {
     }
 }
 
+type WindowKey = [(usize, i64, i64, Kind); 5];
+type WindowValue = (i64, i64, Vec<Block>);
+
 #[derive(Debug)]
 struct Cave {
     actual_block: Block,
@@ -165,7 +168,7 @@ struct Cave {
     occupied: HashSet<Pos>,
     iterations: u64,
     blocks: Vec<(usize, Block)>,
-    windows: HashMap<[(usize, i64, i64, Kind); 5], (i64, i64, Vec<Block>)>,
+    windows: HashMap<WindowKey, WindowValue>,
     shortcut_found: bool,
     target: i64,
 }
@@ -207,7 +210,7 @@ impl Cave {
     }
     fn solve(&mut self, target: i64) -> usize {
         self.target = target;
-        while self.shortcut_found == false {
+        while !self.shortcut_found {
             self.iter();
         }
         while self.inserted_blocks < self.target {
@@ -242,8 +245,7 @@ impl Cave {
         });
         self.inserted_blocks += 1;
 
-        self.blocks
-            .push((self.generator.step, self.actual_block.clone()));
+        self.blocks.push((self.generator.step, self.actual_block));
 
         self.actual_block = self.spawner.generate(Pos(3, self.max_height + 4));
 
@@ -257,7 +259,7 @@ impl Cave {
                 .rev()
                 .take(5)
                 .rev()
-                .map(|(_, b)| b.clone())
+                .map(|(_, b)| *b)
                 .collect();
 
             let window = [

@@ -12,14 +12,7 @@ struct Cargo {
 impl Cargo {
     fn top_crates(&self) -> Vec<String> {
         (0..self.crates.len())
-            .map(|idx| {
-                self.crates
-                    .get(&idx)
-                    .unwrap()
-                    .get(0)
-                    .unwrap()
-                    .to_string()
-            })
+            .map(|idx| self.crates.get(&idx).unwrap().get(0).unwrap().to_string())
             .collect()
     }
     fn put_on_top(&mut self, idx: usize, krate: Crate) {
@@ -59,7 +52,7 @@ impl From<Vec<String>> for Cargo {
 struct Crate(String);
 impl From<String> for Crate {
     fn from(string: String) -> Self {
-        Self(string.replace("[", "").replace("]", ""))
+        Self(string.replace(['[', ']'], ""))
     }
 }
 impl Display for Crate {
@@ -75,7 +68,7 @@ trait Crane {
 struct Crane9000 {}
 impl Crane for Crane9000 {
     fn apply(movement: &Move, cargo: &mut Cargo) {
-        (0..movement.quantity).into_iter().for_each(|_| {
+        (0..movement.quantity).for_each(|_| {
             let krate = cargo.pop_from_top(movement.from).unwrap();
             cargo.put_on_top(movement.to, krate);
         });
@@ -86,7 +79,6 @@ struct Crane9001 {}
 impl Crane for Crane9001 {
     fn apply(movement: &Move, cargo: &mut Cargo) {
         let crates: Vec<Crate> = (0..movement.quantity)
-            .into_iter()
             .map(|_| cargo.pop_from_top(movement.from).unwrap())
             .collect();
 

@@ -110,7 +110,7 @@ impl BlizzardsHistory {
 
         map.iter()
             .map(|it| it.0)
-            .flat_map(|pos| Self::move_blizzards_in(map, &pos, max_x, max_y))
+            .flat_map(|pos| Self::move_blizzards_in(map, pos, max_x, max_y))
             .for_each(|(new_pos, b)| {
                 new_map
                     .entry(new_pos.clone())
@@ -126,7 +126,7 @@ impl BlizzardsHistory {
         max_x: i32,
         max_y: i32,
     ) -> Vec<(Pos, Blizzards)> {
-        if let Some(blizzards) = map.get(&pos) {
+        if let Some(blizzards) = map.get(pos) {
             blizzards
                 .get_all_blizzards()
                 .into_iter()
@@ -228,10 +228,9 @@ impl Map {
             }
 
             let description = (step.pos.clone(), step.iterations);
-            let iterations_for_map = maps_iterations
+            let iterations_for_map = *maps_iterations
                 .get(&description)
-                .unwrap_or(&usize::MAX)
-                .clone();
+                .unwrap_or(&usize::MAX);
 
             if step.iterations >= iterations_for_map {
                 continue;
@@ -265,7 +264,6 @@ impl From<Vec<String>> for Map {
             .take(input.len() - 2)
             .flat_map(|(y, row)| {
                 row.chars()
-                    .into_iter()
                     .enumerate()
                     .skip(1)
                     .take(row.len() - 2)
@@ -274,8 +272,8 @@ impl From<Vec<String>> for Map {
             })
             .collect::<HashMap<_, _>>();
 
-        let max_x = map.keys().map(|it| it.0).max().unwrap() as i32;
-        let max_y = map.keys().map(|it| it.1).max().unwrap() as i32;
+        let max_x = map.keys().map(|it| it.0).max().unwrap();
+        let max_y = map.keys().map(|it| it.1).max().unwrap();
 
         Self {
             blizzards: BlizzardsHistory::new(map, max_x, max_y),

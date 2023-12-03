@@ -74,14 +74,14 @@ fn execute_blueprint(blueprint: Blueprint, end: i32) -> i32 {
             best = ended_blueprint.clone();
         }
 
-        for ore in 0..4 {
+        (0..4).for_each(|ore| {
             if blueprint.robots[ore] == maxes[ore] {
-                continue;
+                return;
             }
             let needed_rounds = blueprint.rounds_to_produce(ore);
 
             if blueprint.iterations + needed_rounds > end - 1 {
-                continue;
+                return;
             }
 
             let mut new_blueprint = blueprint.clone();
@@ -90,7 +90,7 @@ fn execute_blueprint(blueprint: Blueprint, end: i32) -> i32 {
             new_blueprint.produce(ore);
 
             queue.push_front(new_blueprint);
-        }
+        });
     }
 
     best.ores[target]
@@ -105,19 +105,6 @@ struct Blueprint {
     ores: Vec<i32>,
 }
 impl Blueprint {
-    fn empty(idx: i32) -> Self {
-        Self::new(
-            idx,
-            vec![
-                vec![0, 0, 0, 0],
-                vec![0, 0, 0, 0],
-                vec![0, 0, 0, 0],
-                vec![0, 0, 0, 0],
-            ],
-            vec![0, 0, 0, 0],
-            vec![0, 0, 0, 0],
-        )
-    }
     fn new(idx: i32, costs: Vec<Vec<i32>>, robots: Vec<i32>, ores: Vec<i32>) -> Self {
         Self {
             idx,
@@ -235,10 +222,10 @@ mod tests {
             vec![0, 0, 0, 1],
         ];
 
-        assert_eq!(blueprint.produce(0), true);
-        assert_eq!(blueprint.produce(1), true);
-        assert_eq!(blueprint.produce(2), false);
-        assert_eq!(blueprint.produce(3), true);
+        assert!(blueprint.produce(0));
+        assert!(blueprint.produce(1));
+        assert!(!blueprint.produce(2));
+        assert!(blueprint.produce(3));
         assert_eq!(blueprint.robots, vec![1, 1, 0, 1]);
     }
 
@@ -258,5 +245,21 @@ mod tests {
         assert_eq!(blueprint.rounds_to_produce(1), 3);
         assert_eq!(blueprint.rounds_to_produce(2), 2);
         assert_eq!(blueprint.rounds_to_produce(3), 1);
+    }
+
+    impl Blueprint {
+        fn empty(idx: i32) -> Self {
+            Self::new(
+                idx,
+                vec![
+                    vec![0, 0, 0, 0],
+                    vec![0, 0, 0, 0],
+                    vec![0, 0, 0, 0],
+                    vec![0, 0, 0, 0],
+                ],
+                vec![0, 0, 0, 0],
+                vec![0, 0, 0, 0],
+            )
+        }
     }
 }

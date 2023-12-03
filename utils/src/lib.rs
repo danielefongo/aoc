@@ -9,7 +9,7 @@ macro_rules! read_input {
 
 pub fn lines(input: String) -> Vec<String> {
     input
-        .split("\n")
+        .split('\n')
         .filter(|it| !it.is_empty())
         .map(|it| it.to_owned())
         .collect()
@@ -17,13 +17,13 @@ pub fn lines(input: String) -> Vec<String> {
 
 pub fn matches(data: &str, regex: &str) -> bool {
     let regex = Regex::new(regex).unwrap();
-    regex.is_match(&data)
+    regex.is_match(data)
 }
 
 pub fn extract(data: &str, regex: &str) -> Vec<String> {
     Regex::new(regex)
         .unwrap()
-        .find_iter(&data)
+        .find_iter(data)
         .map(|digits| digits.as_str().to_owned())
         .collect()
 }

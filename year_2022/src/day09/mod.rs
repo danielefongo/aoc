@@ -28,8 +28,8 @@ impl From<Vec<String>> for Steps {
     fn from(lines: Vec<String>) -> Self {
         let steps = lines
             .into_iter()
-            .map(|it| {
-                let data: Vec<&str> = it.split(" ").collect();
+            .flat_map(|it| {
+                let data: Vec<&str> = it.split(' ').collect();
                 let step = match data[0] {
                     "L" => Step::Left,
                     "R" => Step::Right,
@@ -41,7 +41,6 @@ impl From<Vec<String>> for Steps {
 
                 (0..count).map(|_| step.clone()).collect::<Vec<Step>>()
             })
-            .flatten()
             .collect();
         Self { steps }
     }
@@ -96,7 +95,7 @@ impl Point {
     }
     fn drag_tail(&mut self) {
         if let Some(tail) = &self.tail {
-            tail.borrow_mut().follow(&self);
+            tail.borrow_mut().follow(self);
         }
     }
     fn update_path(&mut self) {
@@ -113,8 +112,7 @@ pub fn run() {
 fn inner_run(tails: usize, steps: &Steps) -> usize {
     let tail = Rc::new(RefCell::new(Point::new(None)));
     let head = (0..tails).fold(Rc::clone(&tail), |a, _| {
-        let new_head = Rc::new(RefCell::new(Point::new(Some(a))));
-        new_head
+        Rc::new(RefCell::new(Point::new(Some(a))))
     });
 
     steps.iter().for_each(|s| {
