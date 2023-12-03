@@ -43,6 +43,35 @@ impl Game {
     fn allowed(&self, reds: usize, blues: usize, greens: usize) -> bool {
         self.runs.iter().all(|run| run.allowed(reds, blues, greens))
     }
+    fn generate_max_run(&self) -> Run {
+        let blues = self
+            .runs
+            .iter()
+            .map(|it| it.blues)
+            .filter(|it| it > &0)
+            .max()
+            .unwrap_or_default();
+        let reds = self
+            .runs
+            .iter()
+            .map(|it| it.reds)
+            .filter(|it| it > &0)
+            .max()
+            .unwrap_or_default();
+        let greens = self
+            .runs
+            .iter()
+            .map(|it| it.greens)
+            .filter(|it| it > &0)
+            .max()
+            .unwrap_or_default();
+
+        Run {
+            reds,
+            blues,
+            greens,
+        }
+    }
 }
 impl From<String> for Game {
     fn from(value: String) -> Self {
@@ -59,12 +88,26 @@ impl From<String> for Game {
 }
 
 pub fn run() {
-    let id_sum = lines(read_input!())
+    let games = lines(read_input!())
         .into_iter()
         .map(Game::from)
-        .filter(|game| game.allowed(12, 14, 13))
-        .map(|game| game.id)
-        .sum::<usize>();
+        .collect::<Vec<_>>();
 
-    println!("Part1: {}", id_sum)
+    println!(
+        "Part1: {}",
+        games
+            .iter()
+            .filter(|game| game.allowed(12, 14, 13))
+            .map(|game| game.id)
+            .sum::<usize>()
+    );
+
+    println!(
+        "Part2: {}",
+        games
+            .iter()
+            .map(|game| game.generate_max_run())
+            .map(|run| run.greens * run.blues * run.reds)
+            .sum::<usize>()
+    );
 }
