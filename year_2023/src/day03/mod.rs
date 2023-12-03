@@ -12,7 +12,7 @@ impl Pos {
 struct SchemeNumber(u32, Vec<Pos>);
 impl SchemeNumber {
     fn is_next_to_symbol(&self, symbol: &SchemeSymbol) -> bool {
-        self.1.iter().any(|pos| pos.is_next_to(symbol.0))
+        self.1.iter().any(|pos| pos.is_next_to(symbol.1))
     }
     fn number(&self) -> u32 {
         self.0
@@ -20,7 +20,7 @@ impl SchemeNumber {
 }
 
 #[derive(Debug)]
-struct SchemeSymbol(Pos);
+struct SchemeSymbol(char, Pos);
 
 pub fn run() {
     let mut numbers: Vec<SchemeNumber> = vec![];
@@ -43,7 +43,7 @@ pub fn run() {
             }
 
             if !char.is_ascii_digit() && char != '.' {
-                symbols.push(SchemeSymbol(Pos(row, col)))
+                symbols.push(SchemeSymbol(char, Pos(row, col)))
             }
         }
 
@@ -60,6 +60,24 @@ pub fn run() {
                     .any(|symbol| number.is_next_to_symbol(symbol))
             })
             .map(|number| number.number())
+            .sum::<u32>()
+    );
+
+    println!(
+        "Part2: {:?}",
+        symbols
+            .iter()
+            .map(|symbol| {
+                let next_numbers = numbers
+                    .iter()
+                    .filter(|number| number.is_next_to_symbol(symbol))
+                    .collect::<Vec<_>>();
+                if next_numbers.len() > 1 {
+                    next_numbers.iter().map(|it| it.number()).product::<u32>()
+                } else {
+                    0
+                }
+            })
             .sum::<u32>()
     );
 }
