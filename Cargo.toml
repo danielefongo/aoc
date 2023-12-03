@@ -6,8 +6,9 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [workspace]
-members = ["utils", "year_2022"]
+members = ["utils", "year_2022", "year_2023"]
 
 [workspace.dependencies]
 utils = { path = "utils" }
 year_2022 = { path = "year_2022" }
+year_2023 = { path = "year_2023" }
