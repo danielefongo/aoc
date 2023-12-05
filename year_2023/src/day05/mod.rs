@@ -1,27 +1,69 @@
+use std::collections::HashSet;
+
 use utils::{extract, extract_one, read_input};
 
-#[derive(Debug)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 struct Range {
-    destination_start: u64,
-    source_start: u64,
-    source_length: u64,
+    from: i64,
+    to: i64,
+    offset: i64,
 }
 impl Range {
-    fn find_destination(&self, number: u64) -> Option<u64> {
-        if number >= self.source_start && number < self.source_start + self.source_length {
-            Some(self.destination_start + number - self.source_start)
-        } else {
+    fn intersect(&self, r2: &Range) -> Option<Range> {
+        if r2.from > self.to || self.from > r2.to {
             None
+        } else {
+            Some(Range {
+                from: self.from.max(r2.from) + r2.offset,
+                to: self.to.min(r2.to) + r2.offset,
+                offset: 0,
+            })
         }
+    }
+
+    fn intersect_many(&self, ranges: &[Range]) -> HashSet<Range> {
+        let min = ranges.iter().map(|it| it.from).min().unwrap_or(self.from);
+        let max = ranges.iter().map(|it| it.to).max().unwrap_or(self.to);
+
+        let mut found_ranges = ranges
+            .iter()
+            .filter_map(|it| self.intersect(it))
+            .collect::<HashSet<_>>();
+
+        if min <= self.to && min >= self.from {
+            found_ranges.insert(Range {
+                from: self.from,
+                to: min - 1,
+                offset: 0,
+            });
+        }
+        if max >= self.from && max <= self.to {
+            found_ranges.insert(Range {
+                from: max + 1,
+                to: self.to,
+                offset: 0,
+            });
+        }
+        if max < self.from || min > self.to {
+            found_ranges.insert(Range {
+                from: self.from,
+                to: self.to,
+                offset: 0,
+            });
+        }
+        found_ranges
     }
 }
 impl From<String> for Range {
     fn from(value: String) -> Self {
         let numbers = extract(&value, "\\d+");
+        let destination: i64 = numbers[0].parse().unwrap();
+        let from: i64 = numbers[1].parse().unwrap();
+        let length: i64 = numbers[2].parse().unwrap();
         Self {
-            destination_start: numbers[0].parse().unwrap(),
-            source_start: numbers[1].parse().unwrap(),
-            source_length: numbers[2].parse().unwrap(),
+            from,
+            to: from + length - 1,
+            offset: destination - from,
         }
     }
 }
@@ -31,16 +73,10 @@ struct Mapper {
     ranges: Vec<Range>,
 }
 impl Mapper {
-    fn find_destinations(&self, sources: Vec<u64>) -> Vec<u64> {
+    fn find_ranges(&self, sources: Vec<Range>) -> Vec<Range> {
         sources
-            .into_iter()
-            .map(|source| {
-                self.ranges
-                    .iter()
-                    .flat_map(|range| range.find_destination(source))
-                    .next()
-                    .unwrap_or(source)
-            })
+            .iter()
+            .flat_map(|range| range.intersect_many(&self.ranges))
             .collect()
     }
 }
@@ -58,15 +94,22 @@ impl From<String> for Mapper {
 }
 
 pub fn run() {
+    println!("Part1: {}", runner(gen_range_1));
+    println!("Part2: {}", runner(gen_range_2))
+}
+
+fn runner(gen_range: fn(Vec<i64>) -> Vec<Range>) -> i64 {
     let lines = read_input!()
         .split("\n\n")
         .map(|it| it.to_owned())
         .collect::<Vec<_>>();
 
-    let seeds = extract(&lines[0], "\\d+")
-        .into_iter()
-        .map(|it| it.parse().unwrap())
-        .collect::<Vec<_>>();
+    let seed_ranges = gen_range(
+        extract(&lines[0], "\\d+")
+            .into_iter()
+            .map(|it| it.parse().unwrap())
+            .collect::<Vec<_>>(),
+    );
 
     let mappers = lines
         .into_iter()
@@ -74,12 +117,37 @@ pub fn run() {
         .map(Mapper::from)
         .collect::<Vec<_>>();
 
-    let destination = mappers
+    mappers
         .iter()
-        .fold(seeds, |sources, mapper| mapper.find_destinations(sources))
+        .fold(seed_ranges, |sources, mapper| mapper.find_ranges(sources))
         .into_iter()
+        .map(|it| it.from)
         .min()
-        .unwrap();
+        .unwrap()
+}
 
-    println!("Part1: {}", destination)
+fn gen_range_1(seeds: Vec<i64>) -> Vec<Range> {
+    seeds
+        .iter()
+        .map(|value| Range {
+            from: *value,
+            to: *value,
+            offset: 0,
+        })
+        .collect()
+}
+
+fn gen_range_2(seeds: Vec<i64>) -> Vec<Range> {
+    seeds
+        .chunks(2)
+        .map(|values| {
+            let from = values[0];
+            let lenght = values[1];
+            Range {
+                from,
+                to: from + lenght - 1,
+                offset: 0,
+            }
+        })
+        .collect()
 }
