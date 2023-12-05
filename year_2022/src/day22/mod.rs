@@ -160,7 +160,7 @@ impl From<Vec<String>> for Map {
             .iter()
             .filter(|(_, it)| *it == &Kind::Free)
             .map(|it| it.0)
-            .min_by(|Pos(x1, y1), Pos(x2, y2)| (y1, x1).cmp(&(y2, x2)))
+            .min_by(|Pos(x1, y1), Pos(x2, y2)| (y1, x1).cmp(&(y2, x2))
             .unwrap();
 
         let max_x = fields.keys().map(|it| it.0).max().unwrap();
