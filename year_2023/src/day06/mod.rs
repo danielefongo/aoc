@@ -1,7 +1,14 @@
 use utils::{extract, lines, read_input, replace};
 
 pub fn run() {
-    let lines = lines(replace(&read_input!(), "\\w+:", ""))
+    let input = replace(&read_input!(), "\\w+:", "");
+
+    println!("Part1: {:?}", runner(input.clone()));
+    println!("Part2: {:?}", runner(input.replace(' ', "")));
+}
+
+fn runner(input: String) -> usize {
+    let lines = lines(input)
         .into_iter()
         .map(|it| {
             extract(&it, "\\d+")
@@ -11,7 +18,7 @@ pub fn run() {
         })
         .collect::<Vec<_>>();
 
-    let runs = lines[0]
+    lines[0]
         .clone()
         .into_iter()
         .zip(lines[1].clone())
@@ -21,7 +28,5 @@ pub fn run() {
                 .filter(|it| it > &distance)
                 .count()
         })
-        .product::<usize>();
-
-    println!("Part1: {:?}", runs)
+        .product::<usize>()
 }
