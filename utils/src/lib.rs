@@ -15,6 +15,11 @@ pub fn lines(input: String) -> Vec<String> {
         .collect()
 }
 
+pub fn replace(data: &str, regex: &str, text: &str) -> String {
+    let regex = Regex::new(regex).unwrap();
+    regex.replace_all(data, text).to_string()
+}
+
 pub fn matches(data: &str, regex: &str) -> bool {
     let regex = Regex::new(regex).unwrap();
     regex.is_match(data)
