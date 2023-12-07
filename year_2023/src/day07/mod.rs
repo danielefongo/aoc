@@ -2,18 +2,95 @@ use std::{cmp::Ordering, collections::HashMap};
 
 use utils::{lines, read_input};
 
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
-struct Card(u32);
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+enum Card {
+    A,
+    K,
+    Q,
+    J,
+    T,
+    Number(u32),
+}
 impl From<char> for Card {
     fn from(value: char) -> Self {
         match value {
-            'A' => Card(14),
-            'K' => Card(13),
-            'Q' => Card(12),
-            'J' => Card(11),
-            'T' => Card(10),
-            char => Card(char.to_string().parse().unwrap()),
+            'A' => Self::A,
+            'K' => Self::K,
+            'Q' => Self::Q,
+            'J' => Self::J,
+            'T' => Self::T,
+            char => Self::Number(char.to_string().parse().unwrap()),
         }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Rule {
+    Default,
+    Jokers,
+}
+impl Rule {
+    fn card_strength(&self, card: &Card) -> u32 {
+        match self {
+            Self::Default => match card {
+                Card::A => 14,
+                Card::K => 13,
+                Card::Q => 12,
+                Card::J => 11,
+                Card::T => 10,
+                Card::Number(number) => *number,
+            },
+            Rule::Jokers => match card {
+                Card::A => 14,
+                Card::K => 13,
+                Card::Q => 12,
+                Card::J => 0,
+                Card::T => 10,
+                Card::Number(number) => *number,
+            },
+        }
+    }
+    fn cards_strength(&self, cards: &[Card]) -> Vec<u32> {
+        cards
+            .iter()
+            .map(|c| self.card_strength(c))
+            .collect::<Vec<_>>()
+    }
+    fn hand_type(&self, hand: &Hand) -> HandType {
+        let mut hash: HashMap<Card, u32> = HashMap::new();
+        hand.cards.iter().for_each(|card| {
+            *hash.entry(card.clone()).or_default() += 1;
+        });
+
+        if self == &Rule::Jokers {
+            if hand.cards.iter().all(|it| it == &Card::J) {
+                return HandType::FiveOfAKind;
+            }
+
+            let j = *hash.get(&Card::J).unwrap_or(&0);
+            let best = hash
+                .iter()
+                .filter(|c| c.0 != &Card::J)
+                .max_by(|a, b| a.1.cmp(b.1))
+                .unwrap()
+                .0
+                .clone();
+
+            *hash.get_mut(&best).unwrap() += j;
+            *hash.get_mut(&Card::J).unwrap_or(&mut 0) = 0;
+        }
+
+        [
+            |cards| rule(cards, &[(5, 1)], HandType::FiveOfAKind),
+            |cards| rule(cards, &[(4, 1)], HandType::FourOfAKind),
+            |cards| rule(cards, &[(2, 1), (3, 1)], HandType::FullHouse),
+            |cards| rule(cards, &[(3, 1)], HandType::ThreeOfAKind),
+            |cards| rule(cards, &[(2, 2)], HandType::TwoPair),
+            |cards| rule(cards, &[(2, 1)], HandType::OnePair),
+        ]
+        .iter()
+        .find_map(|f| f(&hash))
+        .unwrap_or(HandType::HighCard)
     }
 }
 
@@ -31,8 +108,13 @@ enum HandType {
 #[derive(Debug, PartialEq, Eq)]
 struct Hand {
     cards: Vec<Card>,
-    hand_type: HandType,
+    rule: Rule,
     bid: u32,
+}
+impl Hand {
+    fn new(cards: Vec<Card>, rule: Rule, bid: u32) -> Self {
+        Self { cards, rule, bid }
+    }
 }
 impl PartialOrd for Hand {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
@@ -41,98 +123,50 @@ impl PartialOrd for Hand {
 }
 impl Ord for Hand {
     fn cmp(&self, other: &Self) -> Ordering {
-        match self.hand_type.cmp(&other.hand_type) {
-            Ordering::Equal => other.cards.cmp(&self.cards),
+        let self_hand_type = self.rule.hand_type(self);
+        let other_hand_type = self.rule.hand_type(other);
+        let self_cards = self.rule.cards_strength(&self.cards);
+        let other_cards = self.rule.cards_strength(&other.cards);
+
+        match self_hand_type.cmp(&other_hand_type) {
+            Ordering::Equal => other_cards.cmp(&self_cards),
             ordering => ordering,
         }
     }
 }
-impl From<String> for Hand {
-    fn from(value: String) -> Self {
-        let data = value.split(' ').collect::<Vec<_>>();
-        let cards = data[0].chars().map(Card::from).collect::<Vec<_>>();
-        let bid = data[1].parse().unwrap();
 
-        let hash = counters(&cards);
-
-        let hand_type = [
-            five_of_a_kind,
-            four_of_a_kind,
-            full_house,
-            three_of_kind,
-            two_pair,
-            one_pair,
-        ]
-        .iter()
-        .find_map(|f| f(&hash))
-        .unwrap_or(HandType::HighCard);
-
-        Hand {
-            cards,
-            hand_type,
-            bid,
-        }
-    }
-}
-
-fn counters(cards: &[Card]) -> HashMap<u32, u32> {
-    let mut hash: HashMap<u32, u32> = HashMap::new();
-    cards.iter().for_each(|card| {
-        *hash.entry(card.0).or_default() += 1;
-    });
-    hash
-}
-
-fn five_of_a_kind(cards: &HashMap<u32, u32>) -> Option<HandType> {
-    cards
-        .iter()
-        .any(|(_, c)| c == &5)
-        .then_some(HandType::FiveOfAKind)
-}
-
-fn four_of_a_kind(cards: &HashMap<u32, u32>) -> Option<HandType> {
-    cards
-        .iter()
-        .any(|(_, c)| c == &4)
-        .then_some(HandType::FourOfAKind)
-}
-
-fn full_house(cards: &HashMap<u32, u32>) -> Option<HandType> {
-    if cards.iter().any(|(_, c)| c == &2) && cards.iter().any(|(_, c)| c == &3) {
-        Some(HandType::FullHouse)
-    } else {
-        None
-    }
-}
-
-fn three_of_kind(cards: &HashMap<u32, u32>) -> Option<HandType> {
-    cards
-        .iter()
-        .any(|(_, c)| c == &3)
-        .then_some(HandType::ThreeOfAKind)
-}
-
-fn two_pair(cards: &HashMap<u32, u32>) -> Option<HandType> {
-    (cards.iter().filter(|(_, c)| **c == 2).count() == 2).then_some(HandType::TwoPair)
-}
-
-fn one_pair(cards: &HashMap<u32, u32>) -> Option<HandType> {
-    (cards.iter().filter(|(_, c)| **c == 2).count() == 1).then_some(HandType::OnePair)
+fn rule(
+    cards: &HashMap<Card, u32>,
+    rule: &[(u32, u32)],
+    return_type: HandType,
+) -> Option<HandType> {
+    rule.iter()
+        .all(|(combination, count)| {
+            cards.iter().filter(|(_, c)| c == &combination).count() == *count as usize
+        })
+        .then_some(return_type)
 }
 
 pub fn run() {
+    println!("Part1: {:?}", runner(Rule::Default));
+    println!("Part2: {:?}", runner(Rule::Jokers));
+}
+
+fn runner(rule: Rule) -> u32 {
     let mut hands = lines(read_input!())
         .into_iter()
-        .map(Hand::from)
+        .map(|value| {
+            let data = value.split(' ').collect::<Vec<_>>();
+            let cards = data[0].chars().map(Card::from).collect::<Vec<_>>();
+            let bid = data[1].parse().unwrap();
+            Hand::new(cards, rule, bid)
+        })
         .collect::<Vec<_>>();
     hands.sort_by(|a, b| b.cmp(a));
 
-    println!(
-        "{:?}",
-        hands
-            .iter()
-            .enumerate()
-            .map(|(idx, hand)| { hand.bid * (idx + 1) as u32 })
-            .sum::<u32>()
-    );
+    hands
+        .iter()
+        .enumerate()
+        .map(|(idx, hand)| hand.bid * (idx + 1) as u32)
+        .sum::<u32>()
 }
