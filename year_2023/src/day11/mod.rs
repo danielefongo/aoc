@@ -2,12 +2,12 @@ use utils::{lines, read_input};
 
 #[derive(Debug)]
 struct Pos {
-    x: i32,
-    y: i32,
+    x: i64,
+    y: i64,
 }
 impl Pos {
-    fn distance(&self, other: &Pos) -> u32 {
-        self.x.abs_diff(other.x) + self.y.abs_diff(other.y)
+    fn distance(&self, other: &Pos) -> i64 {
+        (self.x.abs_diff(other.x) + self.y.abs_diff(other.y)) as i64
     }
 }
 
@@ -16,7 +16,7 @@ struct Galaxy {
     pos: Pos,
 }
 impl Galaxy {
-    fn distance(&self, other: &Galaxy) -> u32 {
+    fn distance(&self, other: &Galaxy) -> i64 {
         self.pos.distance(&other.pos)
     }
 }
@@ -26,18 +26,17 @@ struct Universe {
     galaxies: Vec<Galaxy>,
 }
 impl Universe {
-    fn expand(&mut self) {
+    fn expand(&mut self, age: i64) {
         let max_x = self.galaxies.iter().map(|it| it.pos.x).max().unwrap();
         let max_y = self.galaxies.iter().map(|it| it.pos.y).max().unwrap();
 
         (0..max_x).rev().for_each(|x| {
             if !self.galaxies.iter().any(|it| it.pos.x == x) {
-                println!("-> {}", x);
                 self.galaxies
                     .iter_mut()
                     .filter(|it| it.pos.x > x)
                     .for_each(|it| {
-                        it.pos.x += 1;
+                        it.pos.x += age - 1;
                     })
             }
         });
@@ -47,7 +46,7 @@ impl Universe {
                     .iter_mut()
                     .filter(|it| it.pos.y > y)
                     .for_each(|it| {
-                        it.pos.y += 1;
+                        it.pos.y += age - 1;
                     })
             }
         });
@@ -65,8 +64,8 @@ impl From<Vec<String>> for Universe {
                         .filter(|(_, c)| c == &'#')
                         .map(|(x, _)| Galaxy {
                             pos: Pos {
-                                x: x as i32,
-                                y: y as i32,
+                                x: x as i64,
+                                y: y as i64,
                             },
                         })
                         .collect::<Vec<_>>()
@@ -77,20 +76,22 @@ impl From<Vec<String>> for Universe {
 }
 
 pub fn run() {
+    println!("Part1: {:?}", runner(2));
+    println!("Part2: {:?}", runner(1000000));
+}
+
+fn runner(age: i64) -> i64 {
     let mut uni = Universe::from(lines(read_input!()));
-    uni.expand();
-    println!(
-        "Part1: {:?}",
-        uni.galaxies
-            .iter()
-            .enumerate()
-            .flat_map(|(idx, g1)| {
-                uni.galaxies
-                    .iter()
-                    .skip(idx)
-                    .map(|g2| g1.distance(g2))
-                    .collect::<Vec<_>>()
-            })
-            .sum::<u32>()
-    );
+    uni.expand(age);
+    uni.galaxies
+        .iter()
+        .enumerate()
+        .flat_map(|(idx, g1)| {
+            uni.galaxies
+                .iter()
+                .skip(idx)
+                .map(|g2| g1.distance(g2))
+                .collect::<Vec<_>>()
+        })
+        .sum::<i64>()
 }
