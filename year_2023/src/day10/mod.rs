@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use utils::{lines, read_input};
 
-#[derive(Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 struct Pos {
     x: i32,
     y: i32,
@@ -28,7 +28,7 @@ enum Direction {
     Up,
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 enum PipeType {
     Vertical,
     Horizontal,
@@ -55,7 +55,7 @@ impl From<char> for PipeType {
     }
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 struct Pipe {
     pipe_type: PipeType,
     pos: Pos,
@@ -102,24 +102,47 @@ struct Map {
     pipes: HashMap<Pos, Pipe>,
 }
 impl Map {
-    fn get_max_distance(&self, mut dir: Direction) -> Option<i32> {
+    fn boundary(&self) -> Vec<Pipe> {
+        [
+            Direction::Up,
+            Direction::Right,
+            Direction::Down,
+            Direction::Left,
+        ]
+        .into_iter()
+        .find_map(|dir| self.find_boundary_by_dir(dir))
+        .unwrap()
+    }
+    fn find_boundary_by_dir(&self, mut dir: Direction) -> Option<Vec<Pipe>> {
         let mut next = self
             .pipes
             .values()
             .find(|it| it.pipe_type == PipeType::Animal)?;
-
-        let mut count = 0;
+        let mut result: Vec<Pipe> = vec![];
 
         while let Some((delta, new_dir)) = next.next(&dir) {
             dir = new_dir;
             next = self.pipes.get(&next.pos.sum(delta))?;
-            count += 1;
+            result.push(next.clone());
+
             if next.pipe_type == PipeType::Animal {
-                return Some(count / 2);
+                return Some(result);
             }
         }
 
         None
+    }
+    fn area(&self) -> i32 {
+        let mut points: Vec<Pipe> = self.boundary();
+
+        points.push(points[0].clone());
+
+        let sum = points
+            .windows(2)
+            .map(|p| p[0].pos.x * p[1].pos.y - p[0].pos.y * p[1].pos.x)
+            .sum::<i32>();
+
+        sum.abs() / 2
     }
 }
 impl From<Vec<String>> for Map {
@@ -145,17 +168,10 @@ impl From<Vec<String>> for Map {
 
 pub fn run() {
     let map = Map::from(lines(read_input!()));
+    println!("Part1: {}", map.boundary().len() / 2);
+
     println!(
-        "Part1: {}",
-        [
-            Direction::Up,
-            Direction::Right,
-            Direction::Down,
-            Direction::Left
-        ]
-        .into_iter()
-        .filter_map(|dir| map.get_max_distance(dir))
-        .max()
-        .unwrap()
+        "Part2: {}",
+        map.area() - (map.boundary().len() as i32) / 2 + 1
     )
 }
