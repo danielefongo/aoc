@@ -1,8 +1,8 @@
-use std::{collections::HashMap, fmt::Display};
+use std::{collections::HashMap, fmt::Display, hash::Hash};
 
 use utils::{lines, read_input};
 
-#[derive(Debug, Hash, Eq, PartialEq)]
+#[derive(Clone, Debug, Hash, Eq, PartialEq)]
 struct Pos {
     x: i32,
     y: i32,
@@ -13,7 +13,7 @@ impl Pos {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 enum Element {
     Space,
     CubeShapedRock,
@@ -39,13 +39,27 @@ impl From<char> for Element {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 struct Platform {
     elements: HashMap<Pos, Element>,
     width: i32,
     height: i32,
 }
+impl Hash for Platform {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        (0..self.height).for_each(|y| {
+            (0..self.width)
+                .for_each(|x| (x, y, self.elements.get(&Pos::new(x, y)).unwrap()).hash(state))
+        });
+    }
+}
 impl Platform {
+    fn do_cycle(&mut self) {
+        (0..4).for_each(|_| {
+            self.tilt();
+            self.rotate();
+        });
+    }
     fn tilt(&mut self) {
         (0..self.width).for_each(|x| {
             let mut target_y = 0;
@@ -64,6 +78,17 @@ impl Platform {
                 }
             });
         })
+    }
+    fn rotate(&mut self) {
+        let mut elements: HashMap<Pos, Element> = HashMap::new();
+        for (pos, element) in self.elements.iter() {
+            elements.insert(Pos::new(self.height - pos.y - 1, pos.x), element.clone());
+        }
+        let width = self.height;
+        let height = self.width;
+        self.width = width;
+        self.height = height;
+        self.elements = elements;
     }
     fn score(&self) -> i32 {
         let mut count = 0;
@@ -101,7 +126,38 @@ impl From<Vec<String>> for Platform {
 }
 
 pub fn run() {
+    println!("Part1: {}", part1());
+    println!("Part2: {}", part2());
+}
+
+fn part1() -> i32 {
     let mut platform = Platform::from(lines(read_input!()));
     platform.tilt();
-    println!("Part1: {}", platform.score());
+    platform.score()
+}
+
+fn part2() -> i32 {
+    let mut hashes: HashMap<Platform, usize> = HashMap::new();
+    let mut platform = Platform::from(lines(read_input!()));
+
+    let mut cycles = 1;
+    let max_cycles = 1000000000;
+    loop {
+        platform.do_cycle();
+        if let Some(previous_count) = hashes.get(&platform) {
+            let remaining_cycles = (max_cycles - previous_count) % (cycles - previous_count);
+            (0..remaining_cycles).for_each(|_| platform.do_cycle());
+            break;
+        }
+
+        hashes.insert(platform.clone(), cycles);
+
+        if cycles == max_cycles {
+            break;
+        }
+
+        cycles += 1;
+    }
+
+    platform.score()
 }
