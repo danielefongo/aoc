@@ -173,4 +173,15 @@ pub fn run() {
         "Part1: {:?}",
         map.run(Beam::new(Pos::new(0, 0), Dir::Right))
     );
+
+    let mut max = 0;
+    for x in 0..map.width {
+        max = max.max(map.run(Beam::new(Pos::new(x, 0), Dir::Down)));
+        max = max.max(map.run(Beam::new(Pos::new(x, map.height - 1), Dir::Up)));
+    }
+    for y in 0..map.width {
+        max = max.max(map.run(Beam::new(Pos::new(0, y), Dir::Right)));
+        max = max.max(map.run(Beam::new(Pos::new(map.width - 1, y), Dir::Left)));
+    }
+    println!("Part2: {}", max);
 }
